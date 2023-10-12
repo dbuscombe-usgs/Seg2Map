@@ -1792,15 +1792,15 @@ class CoastSeg_Map:
             self.remove_layer_by_name(self.extract_shorelines_container.geo_data.name)
             self.extract_shorelines_container.geo_data = GeoJSON(data={})
 
+
+
+
     def remove_bbox(self):
         """Remove all the bounding boxes from the map"""
         if self.bbox is not None:
             del self.bbox
-            self.bbox = None
         self.draw_control.clear()
-        existing_layer = self.map.find_layer(Bounding_Box.LAYER_NAME)
-        if existing_layer is not None:
-            self.map.remove_layer(existing_layer)
+        self.remove_layer_by_name(Bounding_Box.LAYER_NAME)
         self.bbox = None
 
     def remove_layer_by_name(self, layer_name: str):
@@ -2139,10 +2139,6 @@ class CoastSeg_Map:
         # if layer name is not given use the layer name of the feature
         if not layer_name and hasattr(new_feature, "LAYER_NAME"):
             layer_name = new_feature.LAYER_NAME
-        # if the feature has a geodataframe zoom the map to the bounds of the feature
-        # if zoom_to_bounds and hasattr(new_feature, "gdf"):
-        #     bounds = new_feature.gdf.total_bounds
-        #     self.map.zoom_to_bounds(bounds)
         if hasattr(new_feature, "gdf"):
             bounds = new_feature.gdf.total_bounds
             self.map.zoom_to_bounds(bounds)
