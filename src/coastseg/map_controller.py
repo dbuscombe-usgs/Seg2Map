@@ -198,10 +198,6 @@ class Map_Controller:
         new_feature,
         feature_name: str,
         layer_name: str = "",
-        on_hover: Callable = None,
-        on_click: Callable = None,
-        style=None,
-        hover_style=None,
         **kwargs,
     ) -> None:
         """
@@ -215,11 +211,32 @@ class Map_Controller:
         Returns:
         - None
         """
+        # get on hover and on click handlers for feature
+        on_hover = self.get_on_hover_handler(feature_name)
+        on_click = self.get_on_click_handler(feature_name)
         # if layer name is not given use the layer name of the feature
         if not layer_name and hasattr(new_feature, "LAYER_NAME"):
             layer_name = new_feature.LAYER_NAME
-        self.create_layer_on_map(
-            new_feature, layer_name, on_hover, on_click, style, hover_style
+        if hasattr(new_feature, "gdf"):
+            bounds = new_feature.gdf.total_bounds
+            self.map.zoom_to_bounds(bounds)
+        self.load_on_map(new_feature, layer_name, on_hover, on_click)
+
+    def load_on_map(
+        self, feature, layer_name: str, on_hover=None, on_click=None
+    ) -> None:
+        """Loads feature on map as a new layer
+
+        Replaces current feature layer on map with given feature
+
+        Raises:
+            Exception: raised if feature layer is empty
+        """
+        # style and add the feature to the map
+        new_layer = self.create_layer(feature, layer_name)
+        # Replace old feature layer with new feature layer
+        self.replace_layer_by_name(
+            layer_name, new_layer, on_hover=on_hover, on_click=on_click
         )
 
     def create_layer_on_map(
@@ -319,23 +336,6 @@ class Map_Controller:
                 # remove the user drawn bbox
                 draw_control.clear()
 
-    def load_feature_from_gdf_on_map(
-        self, feature, layer_name: str, on_hover=None, on_click=None
-    ) -> None:
-        """Loads feature on map as a new layer
-
-        Replaces current feature layer on map with given feature
-
-        Raises:
-            Exception: raised if feature layer is empty
-        """
-        # style and add the feature to the map
-        new_layer = self.create_layer(feature, layer_name)
-        # Replace old feature layer with new feature layer
-        self.replace_layer_by_name(
-            layer_name, new_layer, on_hover=on_hover, on_click=on_click
-        )
-
     def create_layer(
         self, feature, layer_name: str, style: dict = None, hover_style: dict = None
     ) -> GeoJSON:
@@ -356,7 +356,17 @@ class Map_Controller:
         Returns:
             ipyleaflet.GeoJSON or None: A styled GeoJson layer if successful, or None if the input is unsupported or empty.
         """
-        # Check if feature is a dictionary and not empty
+
+        # Convert feature's geodataframe attribute to GeoJSON if present
+        if hasattr(feature, "gdf"):
+            if feature.gdf.empty:
+                print("Cannot add an empty geodataframe layer to the map.")
+                return None
+            layer_geojson = json.loads(feature.gdf.to_json())
+            # convert layer to GeoJson and style it accordingly
+            return feature.style_layer(layer_geojson, layer_name)
+
+        # Handle dictionary or geodataframe directly passed
         if isinstance(feature, dict) and feature:
             layer_geojson = feature
         # Check if feature is a geodataframe
@@ -370,10 +380,6 @@ class Map_Controller:
             return None
 
         # Convert layer to GeoJson and style it accordingly
-        if not hover_style:
-            hover_style = {}
-        if not style:
-            style = {}
         styled_layer = style_layer(layer_geojson, layer_name, style, hover_style)
         return styled_layer
 
