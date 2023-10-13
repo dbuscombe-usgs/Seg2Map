@@ -42,7 +42,7 @@ def get_collection_by_tier(
     end_date: Union[str, datetime],
     satellite: str,
     tier: int,
-    max_cloud_cover: float = 99,
+    max_cloud_cover: float = 95,
 ) -> Union[ee.ImageCollection, None]:
     """
     This function takes the required parameters and returns an ImageCollection from
@@ -66,7 +66,7 @@ def get_collection_by_tier(
     if isinstance(end_date, datetime):
         end_date = end_date.isoformat()
 
-    # Define collection names
+    # Define collection names for tier 1 and tier 2
     col_names = {
         1: {
             "L5": "LANDSAT/LT05/C02/T1_TOA",
@@ -91,20 +91,22 @@ def get_collection_by_tier(
         return None
 
     collection_name = col_names[tier][satellite]
+    # Mapping satellite names to their respective cloud properties
+    cloud_properties = {
+        "L5": "CLOUD_COVER",
+        "L7": "CLOUD_COVER",
+        "L8": "CLOUD_COVER",
+        "L9": "CLOUD_COVER",
+        "S2": "CLOUDY_PIXEL_PERCENTAGE",
+    }
+    cloud_property = cloud_properties.get(satellite)
+
     collection = (
         ee.ImageCollection(collection_name)
         .filterBounds(ee.Geometry.Polygon(polygon))
         .filterDate(ee.Date(start_date), ee.Date(end_date))
+        .filterMetadata(cloud_property, "less_than", max_cloud_cover)
     )
-
-    # Add cloud cover filter
-    cloud_property = (
-        "CLOUD_COVER"
-        if satellite in ["L5", "L7", "L8", "L9"]
-        else "CLOUDY_PIXEL_PERCENTAGE"
-    )
-    collection = collection.filter(ee.Filter.lt(cloud_property, max_cloud_cover))
-
     return collection
 
 
@@ -112,7 +114,7 @@ def count_images_in_ee_collection(
     polygon: list[list[float]],
     start_date: Union[str, datetime],
     end_date: Union[str, datetime],
-    max_cloud_cover: float = 99,
+    max_cloud_cover: float = 95,
     satellites: Collection[str] = ("L5", "L7", "L8", "L9", "S2"),
 ) -> dict:
     """
