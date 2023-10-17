@@ -1,5 +1,6 @@
 # Standard library imports
 import os
+import logging
 import json
 from typing import Callable, Collection, Dict, List, Optional, Tuple, Union
 import traceback
@@ -21,6 +22,7 @@ from coastseg.bbox import Bounding_Box
 from coastseg.shoreline import Shoreline
 from coastseg.transects import Transects
 from coastseg.roi import ROI
+from coastseg.factory import Factory
 
 
 # Internal/Local imports: modules
@@ -29,6 +31,12 @@ from coastseg import (
     exceptions,
     exception_handler,
 )
+
+logger = logging.getLogger(__name__)
+
+# global variables
+SELECTED_LAYER_NAME = "Selected Shorelines"
+
 
 # Helper functions
 
@@ -110,12 +118,15 @@ class Map_Controller:
     MIN_AREA = 1000  # UNITS = Sq. Meters
 
     def __init__(self):
+        self.factory = Factory()
         self.map = None
         self.draw_control = None
         self.selected_layer_name = "Selected"
         self.unselected_layer_name = "Unselected"
         # ids of items currently selected on map
         self.selected_set = set()
+        # ids of shorelines currently selected on map
+        self.selected_shorelines_set = set()
         # Basic settings and configurations
         self.settings = {
             "center_point": (36.8470, -121.8024),
@@ -127,7 +138,11 @@ class Map_Controller:
             "Layout": Layout(width="100%", height="100px"),
         }
         self.callbacks = {"on_draw": []}
+        #  create the map as well as the draw control
         self._init_map_components()
+
+        # Warning and information boxes
+        self._init_info_boxes()
 
     def register_callback(self, event, callback):
         if event in self.callbacks:
@@ -172,6 +187,18 @@ class Map_Controller:
         self.warning_widget = WidgetControl(widget=self.warning_box, position="topleft")
         self.map.add(self.warning_widget)
 
+        self.roi_html = HTML("""""")
+        self.roi_box = common.create_hover_box(title="ROI", feature_html=self.roi_html)
+        self.roi_widget = WidgetControl(widget=self.roi_box, position="topright")
+        self.map.add(self.roi_widget)
+
+        self.feature_html = HTML("""""")
+        self.hover_box = common.create_hover_box(
+            title="Feature", feature_html=self.feature_html
+        )
+        self.hover_widget = WidgetControl(widget=self.hover_box, position="topright")
+        self.map.add(self.hover_widget)
+
     def remove_layer_by_name(self, layer_name: str):
         existing_layer = self.map.find_layer(layer_name)
         if existing_layer is not None:
@@ -192,6 +219,43 @@ class Map_Controller:
             layout=self.settings["Layout"],
             world_copy_jump=True,
         )
+
+    def get_on_click_handler(self, feature_name: str) -> callable:
+        """
+        Returns a callable function that handles mouse click events for a given feature.
+
+        Args:
+        - feature_name (str): A string representing the name of the feature for which the click handler needs to be returned.
+
+        Returns:
+        - callable: A callable function that handles mouse click events for a given feature.
+        """
+        on_click = None
+        if "roi" in feature_name.lower():
+            on_click = self.geojson_onclick_handler
+        elif "shoreline" in feature_name.lower():
+            on_click = self.shoreline_onclick_handler
+        return on_click
+
+    def get_on_hover_handler(self, feature_name: str) -> callable:
+        """
+        Returns a callable function that handles mouse hover events for a given feature.
+
+        Args:
+        - feature_name (str): A string representing the name of the feature for which the hover handler needs to be returned.
+
+        Returns:
+        - callable: A callable function that handles mouse hover events for a given feature.
+        """
+        on_hover = None
+        feature_name_lower = feature_name.lower()
+        if "shoreline" in feature_name_lower:
+            on_hover = self.update_shoreline_html
+        elif "transect" in feature_name_lower:
+            on_hover = self.update_transects_html
+        elif "roi" in feature_name_lower:
+            on_hover = self.update_roi_html
+        return on_hover
 
     def add_feature_on_map(
         self,
@@ -281,16 +345,44 @@ class Map_Controller:
         else:
             raise Exception("Unsupported feature type provided or feature is empty.")
 
+    def update_transects_html(self, feature: dict, **kwargs):
+        """
+        Modifies the HTML when a transect is hovered over.
+
+        Args:
+            feature (dict): The transect feature.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None
+
+        """
+        properties = feature["properties"]
+        transect_id = properties.get("id", "unknown")
+        slope = properties.get("slope", "unknown")
+
+        self.feature_html.value = (
+            "<div style='max-width: 230px; max-height: 200px; overflow-x: auto; overflow-y: auto'>"
+            "<b>Transect</b>"
+            f"<p>Id: {transect_id}</p>"
+            f"<p>Slope: {slope}</p>"
+        )
+
     def create_bbox(
         self, geometry: dict | gpd.GeoDataFrame, layer_name: str = "Bbox", **kwargs
     ) -> Bounding_Box:
-        bbox = Bounding_Box(geometry)
-        exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
+        # create bbox using factory
+        new_feature = self.factory.make_feature(layer_name, geometry, **kwargs)
+        if new_feature is None:
+            return
+        # this logic is now handled by the factory
+        # bbox = Bounding_Box(geometry)
+        # exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
 
         # remove the existing bbox layer from map
         # self.remove_layer_by_name(layer_name)
         self.create_layer_on_map(
-            bbox,
+            new_feature,
             layer_name,
             style={
                 "color": "#75b671",
@@ -302,7 +394,7 @@ class Map_Controller:
         )
         # Notify all registered callbacks for 'on_draw' event
         for callback in self.callbacks["on_draw"]:
-            callback(bbox)
+            callback(new_feature)
 
     def handle_draw(self, draw_control: DrawControl, action: str, geo_json: dict):
         """Adds or removes the bounding box  when drawn/deleted from map
@@ -478,3 +570,23 @@ class Map_Controller:
             selected_layer,
             on_click=self.selected_onclick_handler,
         )
+
+    def remove_selected_shorelines(self) -> None:
+        """Removes all the unselected rois from the map"""
+        logger.info("Removing selected shorelines from map")
+        # Remove the selected and unselected rois
+        self.remove_layer_by_name(SELECTED_LAYER_NAME)
+        self.remove_layer_by_name(Shoreline.LAYER_NAME)
+
+        # Call the callback to update the selected shorelines
+        #
+        # delete selected ROIs from dataframe
+        if self.shoreline:
+            self.shoreline.remove_by_id(self.selected_shorelines_set)
+        # clear all the ids from the selected set
+        self.selected_shorelines_set = set()
+        # reload rest of shorelines on map
+        if hasattr(self.shoreline, "gdf"):
+            self.load_feature_on_map(
+                "shoreline", gdf=self.shoreline.gdf, zoom_to_bounds=True
+            )

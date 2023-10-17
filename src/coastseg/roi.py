@@ -312,7 +312,7 @@ class ROI:
 
     def create_geodataframe(
         self,
-        bbox: gpd.geodataframe,
+        bbox: gpd.GeoDataFrame,
         shoreline: gpd.GeoDataFrame,
         large_length: float = 7500,
         small_length: float = 5000,
@@ -423,7 +423,7 @@ class ROI:
         square_size: float,
         input_espg="epsg:4326",
         output_epsg="epsg:4326",
-    ) -> gpd.geodataframe:
+    ) -> gpd.GeoDataFrame:
         """Creates a fishnet of square shaped ROIs with side length= square_size
 
         Args:
@@ -433,7 +433,7 @@ class ROI:
             output_epsg (str, optional): espg code the ROIs will output to. Defaults to "epsg:4326".
 
         Returns:
-            gpd.geodataframe: geodataframe containing all the ROIs
+            gpd.GeoDataFrame: geodataframe containing all the ROIs
         """
         projected_espg = common.get_epsg_from_geometry(bbox.iloc[0]["geometry"])
         logger.info(f"ROI: projected_espg_code: {projected_espg}")
@@ -451,17 +451,17 @@ class ROI:
         input_espg: str,
         output_epsg: str,
         square_size: float = 1000,
-    ) -> gpd.geodataframe:
+    ) -> gpd.GeoDataFrame:
         """Returns a fishnet of ROIs that intersects the bounding box specified by bbox_gdf where each ROI(square) has a side length = square size(meters)
 
         Args:
-            bbox_gdf (gpd.geodataframe): Bounding box that fishnet intersects.
+            bbox_gdf (gpd.GeoDataFrame): Bounding box that fishnet intersects.
             input_espg (str): espg string that bbox_gdf is projected in
             output_epsg (str): espg to convert the fishnet of ROIs to.
             square_size (int, optional): Size of each square in fishnet(meters). Defaults to 1000.
 
         Returns:
-            gpd.geodataframe: fishnet of ROIs that intersects bbox_gdf. Each ROI has a side lenth = sqaure_size
+            gpd.GeoDataFrame: fishnet of ROIs that intersects bbox_gdf. Each ROI has a side lenth = sqaure_size
         """
         minX, minY, maxX, maxY = bbox_gdf.total_bounds
         # Create a fishnet where each square has side length = square size

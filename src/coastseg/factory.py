@@ -11,6 +11,7 @@ from coastseg import exception_handler
 from coastseg import coastseg_map
 from geopandas import GeoDataFrame
 
+
 # from geopandas import GeoDataFrame,GeoSeries
 # from shapely.geometry import Polygon
 
@@ -81,6 +82,40 @@ def create_shoreline(
     return shoreline
 
 
+# def create_transects(
+#     coastsegmap, gdf: Optional[GeoDataFrame] = None, **kwargs
+# ) -> Transects:
+#     if gdf is not None:
+#         transects = Transects(transects=gdf)
+#     else:
+#         # check if coastsegmap has a ROI
+#         if coastsegmap.rois is not None:
+#             if coastsegmap.rois.gdf.empty == False:
+#                 # merge ROI geometeries together and use that as the bbbox
+#                 merged_rois = merge_rectangles(coastsegmap.rois.gdf)
+#                 transects = Transects(merged_rois)
+#                 exception_handler.check_if_gdf_empty(
+#                     transects.gdf,
+#                     "transects",
+#                     "Transects Not Found in this region. Draw a new bounding box",
+#                 )
+#         else:
+#             # otherwise check if coastsegmap has a bbox
+#             exception_handler.check_if_None(coastsegmap.bbox, "bounding box")
+#             exception_handler.check_if_gdf_empty(coastsegmap.bbox.gdf, "bounding box")
+
+#             transects = Transects(coastsegmap.bbox.gdf)
+#             exception_handler.check_if_gdf_empty(
+#                 transects.gdf,
+#                 "transects",
+#                 "Transects Not Found in this region. Draw a new bounding box",
+#             )
+
+#     logger.info("Transects were loaded on map")
+#     coastsegmap.transects = transects
+#     return transects
+
+
 def create_transects(
     coastsegmap, gdf: Optional[GeoDataFrame] = None, **kwargs
 ) -> Transects:
@@ -115,20 +150,26 @@ def create_transects(
     return transects
 
 
-def create_bbox(
-    coastsegmap, gdf: Optional[GeoDataFrame] = None, **kwargs
-) -> Bounding_Box:
-    if gdf is not None:
-        bbox = Bounding_Box(gdf)
-        exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
-    else:
-        geometry = coastsegmap.draw_control.last_draw["geometry"]
-        bbox = Bounding_Box(geometry)
-        exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
-    coastsegmap.remove_bbox()
-    coastsegmap.draw_control.clear()
-    logger.info("Bounding Box was loaded on map")
-    coastsegmap.bbox = bbox
+# def create_bbox(
+#     coastsegmap, gdf: Optional[GeoDataFrame] = None, **kwargs
+# ) -> Bounding_Box:
+#     if gdf is not None:
+#         bbox = Bounding_Box(gdf)
+#         exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
+#     else:
+#         geometry = coastsegmap.draw_control.last_draw["geometry"]
+#         bbox = Bounding_Box(geometry)
+#         exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
+#     coastsegmap.remove_bbox()
+#     coastsegmap.draw_control.clear()
+#     logger.info("Bounding Box was loaded on map")
+#     coastsegmap.bbox = bbox
+#     return bbox
+
+
+def create_bbox(geometry: dict | GeoDataFrame, **kwargs) -> Bounding_Box:
+    bbox = Bounding_Box(geometry)
+    exception_handler.check_if_gdf_empty(bbox.gdf, "bounding box")
     return bbox
 
 
@@ -198,22 +239,45 @@ class Factory:
         "roi": create_rois,
     }
 
+    # @staticmethod
+    # def make_feature(
+    #     coastsegmap: "CoastSeg_Map",
+    #     feature_name: str,
+    #     gdf: Optional[GeoDataFrame] = None,
+    #     **kwargs,
+    # ) -> Union[Shoreline, Transects, Bounding_Box, ROI]:
+    #     logger.info(
+    #         f"feature_name {feature_name}\ncoastsegmap: {coastsegmap}\nGdf: {gdf}\nkwargs: {kwargs}"
+    #     )
+    #     # get the function that can be used to create the feature_name
+    #     # ex. "shoreline" would get the create_shoreline function
+    #     feature_maker = Factory._feature_makers.get(feature_name.lower())
+    #     # if a geodataframe is provided
+    #     if gdf is not None:
+    #         if gdf.empty:
+    #             return None
+
+    #     return feature_maker(coastsegmap, gdf, **kwargs)
     @staticmethod
     def make_feature(
-        coastsegmap: "CoastSeg_Map",
         feature_name: str,
-        gdf: Optional[GeoDataFrame] = None,
+        geometry: dict | GeoDataFrame = None,
         **kwargs,
     ) -> Union[Shoreline, Transects, Bounding_Box, ROI]:
         logger.info(
-            f"feature_name {feature_name}\ncoastsegmap: {coastsegmap}\nGdf: {gdf}\nkwargs: {kwargs}"
+            f"feature_name {feature_name}\ngeometry: {geometry}\nkwargs: {kwargs}"
         )
         # get the function that can be used to create the feature_name
         # ex. "shoreline" would get the create_shoreline function
-        feature_maker = Factory._feature_makers.get(feature_name)
-        # if a geodataframe is provided
-        if gdf is not None:
-            if gdf.empty:
+        feature_maker = Factory._feature_makers.get(feature_name.lower())
+        # If an empty geodataframe is provided return None because nothing can be created
+        if not geometry:
+            return None
+        elif isinstance(geometry, GeoDataFrame):
+            if geometry.empty:
                 return None
-
-        return feature_maker(coastsegmap, gdf, **kwargs)
+        elif isinstance(geometry, dict):
+            if geometry == {}:
+                return None
+        # return the new feature
+        return feature_maker(geometry, **kwargs)

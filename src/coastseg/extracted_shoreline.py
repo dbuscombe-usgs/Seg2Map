@@ -1595,7 +1595,7 @@ class Extracted_Shoreline:
 
     def extract_shorelines(
         self,
-        shoreline_gdf: gpd.geodataframe,
+        shoreline_gdf: gpd.GeoDataFrame,
         roi_settings: dict,
         settings: dict,
         session_path: str = None,
@@ -1802,7 +1802,7 @@ class Extracted_Shoreline:
 
 
 def get_reference_shoreline(
-    shoreline_gdf: gpd.geodataframe, output_crs: str
+    shoreline_gdf: gpd.GeoDataFrame, output_crs: str
 ) -> np.ndarray:
     """
     Converts a GeoDataFrame of shoreline features into a numpy array of latitudes, longitudes, and zeroes representing the mean sea level.
@@ -1835,11 +1835,11 @@ def get_colors(length: int) -> list:
     return cmap_list
 
 
-def make_coastsat_compatible(feature: gpd.geodataframe) -> list:
+def make_coastsat_compatible(feature: gpd.GeoDataFrame) -> list:
     """Return the feature as an np.array in the form:
         [([lat,lon],[lat,lon],[lat,lon]),([lat,lon],[lat,lon],[lat,lon])...])
     Args:
-        feature (gpd.geodataframe): clipped portion of shoreline within a roi
+        feature (gpd.GeoDataFrame): clipped portion of shoreline within a roi
     Returns:
         list: shorelines in form:
             [([lat,lon],[lat,lon],[lat,lon]),([lat,lon],[lat,lon],[lat,lon])...])

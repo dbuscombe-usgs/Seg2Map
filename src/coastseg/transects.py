@@ -102,10 +102,14 @@ class Transects:
         transects: Optional[gpd.GeoDataFrame] = None,
     ):
         if transects is not None:
-            self.initialize_transects_with_transects(transects)
-
+            if isinstance(transects, gpd.GeoDataFrame) and not transects.empty:
+                self.initialize_transects_with_transects(transects)
         elif bbox is not None:
-            self.initialize_transects_with_bbox(bbox)
+            if isinstance(bbox, gpd.GeoDataFrame) and not bbox.empty:
+                self.initialize_transects_with_bbox(bbox)
+        else:
+            # if the geodataframe was empty, None or the wrong type return None
+            return None
 
     def initialize_transects_with_transects(self, transects: gpd.GeoDataFrame):
         """
@@ -212,7 +216,7 @@ class Transects:
             hover_style={"color": "blue", "fillOpacity": 0.7},
         )
 
-    def get_intersecting_files(self, bbox_gdf: gpd.geodataframe) -> list:
+    def get_intersecting_files(self, bbox_gdf: gpd.GeoDataFrame) -> list:
         """Returns a list of filenames that intersect with bbox_gdf
 
         Args:

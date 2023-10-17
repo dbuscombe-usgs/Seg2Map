@@ -104,7 +104,7 @@ def filter_images_by_roi(roi_settings: list[dict]):
 
 
 def filter_partial_images(
-    roi_gdf: gpd.geodataframe,
+    roi_gdf: gpd.GeoDataFrame,
     directory: str,
     min_area_percentage: float = 0.60,
     max_area_percentage: float = 1.5,
@@ -141,7 +141,7 @@ def filter_partial_images(
     )
 
 
-def get_roi_area(gdf: gpd.geodataframe) -> float:
+def get_roi_area(gdf: gpd.GeoDataFrame) -> float:
     """
     Calculates the area of the Region of Interest (ROI) from the given GeoDataFrame.
 
@@ -171,7 +171,7 @@ def get_roi_area(gdf: gpd.geodataframe) -> float:
     return projected_gdf.area.iloc[0] / 1e6
 
 
-def get_satellite_name(filename:str):
+def get_satellite_name(filename: str):
     """Returns the satellite name in the jpg name. Does not work tiffs"""
     try:
         return filename.split("_")[2].split(".")[0]
@@ -1215,17 +1215,17 @@ def convert_wgs_to_utm(lon: float, lat: float) -> str:
     return epsg_code
 
 
-def extract_roi_by_id(gdf: gpd.geodataframe, roi_id: int) -> gpd.geodataframe:
+def extract_roi_by_id(gdf: gpd.GeoDataFrame, roi_id: int) -> gpd.GeoDataFrame:
     """Returns geodataframe with a single ROI whose id matches roi_id.
        If roi_id is None returns gdf
 
     Args:
-        gdf (gpd.geodataframe): ROI geodataframe to extract ROI with roi_id from
+        gdf (gpd.GeoDataFrame): ROI geodataframe to extract ROI with roi_id from
         roi_id (int): id of the ROI to extract
     Raises:
         exceptions.Id_Not_Found: if id doesn't exist in ROI's geodataframe or self.rois.gdf is empty
     Returns:
-        gpd.geodataframe: ROI with id matching roi_id
+        gpd.GeoDataFrame: ROI with id matching roi_id
     """
     if roi_id is None:
         single_roi = gdf
@@ -1369,7 +1369,7 @@ def preprocess_geodataframe(
     return data
 
 
-def get_transect_points_dict(feature: gpd.geodataframe) -> dict:
+def get_transect_points_dict(feature: gpd.GeoDataFrame) -> dict:
     """Returns dict of np.arrays of transect start and end points
     Example
     {
@@ -1379,7 +1379,7 @@ def get_transect_points_dict(feature: gpd.geodataframe) -> dict:
         [-13820900.16320004,   4995862.31860808]])
     }
     Args:
-        feature (gpd.geodataframe): clipped transects within roi
+        feature (gpd.GeoDataFrame): clipped transects within roi
     Returns:
         dict: dict of np.arrays of transect start and end points
         of form {
