@@ -1700,12 +1700,12 @@ def create_config_gdf(
         "bbox": bbox_gdf,
     }
 
-    # Process each GeoDataFrame
+    # initialize each gdf
     for gdf_type, gdf in gdfs.items():
         gdfs[gdf_type] = set_crs_or_initialize_empty(gdf, epsg_code)
         gdfs[gdf_type]["type"] = gdf_type
 
-    # Concatenate GeoDataFrames
+    # Concatenate GeoDataFrames into a single config gdf
     config_gdf = pd.concat(gdfs.values(), ignore_index=True)
 
     return config_gdf

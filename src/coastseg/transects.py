@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 def load_intersecting_transects(
-    rectangle: gpd.GeoDataFrame, transect_files: List[str], transect_dir: str
+    rectangle: gpd.GeoDataFrame,
+    transect_files: List[str],
+    transect_dir: str,
+    columns_to_keep: set = set(["id", "geometry", "slope"]),
 ) -> gpd.GeoDataFrame:
     """
     Loads transects from a list of GeoJSON files in the transect directory, selects the transects that intersect with
@@ -36,7 +39,7 @@ def load_intersecting_transects(
         that intersect with the rectangle.
     """
     # Create an empty GeoDataFrame to hold the selected transects
-    selected_transects = gpd.GeoDataFrame(columns=["id", "geometry", "slope"])
+    selected_transects = gpd.GeoDataFrame(columns=list(columns_to_keep))
 
     # Get the bounding box of the rectangle
     bbox = rectangle.bounds.iloc[0].tolist()
@@ -52,14 +55,14 @@ def load_intersecting_transects(
         elif not transects.empty:
             logger.info("Adding transects from %s", transects_name)
             transects = preprocess_geodataframe(
-                transects, columns_to_keep=["id", "geometry", "slope"], create_ids=False
+                transects, columns_to_keep=list(columns_to_keep), create_ids=False
             )
             # Append the selected transects to the output GeoDataFrame
             selected_transects = pd.concat(
                 [selected_transects, transects], ignore_index=True
             )
     selected_transects = preprocess_geodataframe(
-        selected_transects, columns_to_keep=["id", "geometry", "slope"], create_ids=True
+        selected_transects, columns_to_keep=list(columns_to_keep), create_ids=True
     )
     validate_geometry_types(
         selected_transects,
@@ -75,6 +78,28 @@ class Transects:
     """A class representing a collection of transects within a specified bounding box."""
 
     LAYER_NAME = "transects"
+    COLUMNS_TO_KEEP = set(
+        [
+            "id",
+            "geometry",
+            "slope",
+            "distance",
+            "feature_x",
+            "feature_y",
+            "nearest_x",
+            "nearest_y",
+        ]
+    )
+
+    # Define columns of interest and their descriptions:
+    # id: unique identifier for each transect
+    # geometry: the geometric shape, position, and configuration of the transect
+    # slope: represents the beach face slope, used for tidal correction of transect-based data
+    # distance: represents the distance in degrees between the slope datum location and the transect location
+    # feature_x: x-coordinate of the transect location
+    # feature_y: y-coordinate of the transect location
+    # nearest_x: x-coordinate of the nearest slope location to the transect
+    # nearest_y: y-coordinate of the nearest slope location to the transect
 
     def __init__(
         self,
@@ -123,7 +148,7 @@ class Transects:
                 transects.set_crs("EPSG:4326", inplace=True)
             transects = preprocess_geodataframe(
                 transects,
-                columns_to_keep=["id", "geometry", "slope"],
+                columns_to_keep=list(Transects.COLUMNS_TO_KEEP),
                 create_ids=True,
                 output_crs="EPSG:4326",
             )
@@ -168,14 +193,17 @@ class Transects:
         transect_dir = os.path.abspath(os.path.join(script_dir, "transects"))
         # for each transect file clip it to the bbox and add to map
         transects_in_bbox = load_intersecting_transects(
-            bbox, intersecting_transect_files, transect_dir
+            bbox,
+            intersecting_transect_files,
+            transect_dir,
+            columns_to_keep=list(Transects.COLUMNS_TO_KEEP),
         )
         if transects_in_bbox.empty:
             logger.warning("No transects found here.")
         # remove z-axis from transects
         transects_in_bbox = preprocess_geodataframe(
             transects_in_bbox,
-            columns_to_keep=["id", "geometry", "slope"],
+            columns_to_keep=list(Transects.COLUMNS_TO_KEEP),
             create_ids=True,
         )
         validate_geometry_types(

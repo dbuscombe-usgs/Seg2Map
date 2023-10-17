@@ -122,7 +122,7 @@ def create_transects(
     if gdf is not None:
         transects = Transects(transects=gdf)
     else:
-        # check if coastsegmap has a ROI
+        # load the transects in all the ROIS in coastsegmap
         if coastsegmap.rois is not None:
             if coastsegmap.rois.gdf.empty == False:
                 # merge ROI geometeries together and use that as the bbbox
@@ -134,7 +134,7 @@ def create_transects(
                     "Transects Not Found in this region. Draw a new bounding box",
                 )
         else:
-            # otherwise check if coastsegmap has a bbox
+            # otherwise load the transects within a bbox in coastsegmap
             exception_handler.check_if_None(coastsegmap.bbox, "bounding box")
             exception_handler.check_if_gdf_empty(coastsegmap.bbox.gdf, "bounding box")
 

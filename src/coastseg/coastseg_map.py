@@ -1,5 +1,6 @@
 # Standard library imports
 import os
+import math
 import json
 import logging
 import glob
@@ -538,7 +539,7 @@ class CoastSeg_Map:
         feature_types = {
             "bbox": ["geometry"],
             "roi": ["id", "geometry"],
-            "transect": ["id", "slope", "geometry"],
+            "transect": list(Transects.COLUMNS_TO_KEEP),
             "shoreline": ["geometry"],
         }
 
@@ -899,7 +900,6 @@ class CoastSeg_Map:
             epsg_code=epsg_code,
         )
         logger.info(f"config_gdf: {config_gdf} ")
-        is_downloaded = common.were_rois_downloaded(self.rois.roi_settings, roi_ids)
 
         def save_config_files(config_json, config_gdf, path):
             """Helper function to save config files."""
@@ -910,6 +910,7 @@ class CoastSeg_Map:
             # If a filepath is provided then save the config.json and config_gdf.geojson immediately
             save_config_files(config_json, config_gdf, filepath)
         else:
+            is_downloaded = common.were_rois_downloaded(self.rois.roi_settings, roi_ids)
             # if  data has been downloaded before then inputs have keys 'filepath' and 'sitename'
             if is_downloaded:
                 # write config_json file to each directory where a roi was saved
@@ -1027,12 +1028,56 @@ class CoastSeg_Map:
         properties = feature["properties"]
         transect_id = properties.get("id", "unknown")
         slope = properties.get("slope", "unknown")
+        distance = properties.get("distance", "unknown")
+        feature_x = properties.get("feature_x", "unknown")
+        feature_y = properties.get("feature_y", "unknown")
+        nearest_x = properties.get("nearest_x", "unknown")
+        nearest_y = properties.get("nearest_y", "unknown")
+        variables = [distance, feature_x, feature_y, nearest_x, nearest_y]
+
+        def is_unknown_or_None_or_nan(value):
+            if isinstance(value, str):
+                return True
+            if not value:
+                return True
+            elif math.isnan(value):
+                return True
+
+        # Conditional rounding or keep as 'unknown'
+        distance = (
+            round(float(distance), 3)
+            if not is_unknown_or_None_or_nan(distance)
+            else "unknown"
+        )
+        feature_x = (
+            round(float(feature_x), 6)
+            if not is_unknown_or_None_or_nan(feature_x)
+            else "unknown"
+        )
+        feature_y = (
+            round(float(feature_y), 6)
+            if not is_unknown_or_None_or_nan(feature_y)
+            else "unknown"
+        )
+        nearest_x = (
+            round(float(nearest_x), 6)
+            if not is_unknown_or_None_or_nan(nearest_x)
+            else "unknown"
+        )
+        nearest_y = (
+            round(float(nearest_y), 6)
+            if not is_unknown_or_None_or_nan(nearest_y)
+            else "unknown"
+        )
 
         self.feature_html.value = (
             "<div style='max-width: 230px; max-height: 200px; overflow-x: auto; overflow-y: auto'>"
             "<b>Transect</b>"
             f"<p>Id: {transect_id}</p>"
             f"<p>Slope: {slope}</p>"
+            f"<p>Distance btw slope and transect: {distance}</p>"
+            f"<p>Transect (x,y):({feature_x},{feature_y})</p>"
+            f"<p>Nearest Slope (x,y):({nearest_x},{nearest_y})</p>"
         )
 
     def update_extracted_shoreline_html(self, feature, **kwargs):
