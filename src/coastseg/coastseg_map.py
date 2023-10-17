@@ -1792,9 +1792,6 @@ class CoastSeg_Map:
             self.remove_layer_by_name(self.extract_shorelines_container.geo_data.name)
             self.extract_shorelines_container.geo_data = GeoJSON(data={})
 
-
-
-
     def remove_bbox(self):
         """Remove all the bounding boxes from the map"""
         if self.bbox is not None:
@@ -2075,7 +2072,7 @@ class CoastSeg_Map:
         self.extract_shorelines_container.geo_data = new_layer
 
     def load_feature_on_map(
-        self, feature_name: str, file: str = "", gdf: gpd.GeoDataFrame = None, **kwargs
+        self, feature_name: str, file: str = "", geometry: gpd.GeoDataFrame = None, **kwargs
     ) -> None:
         """Loads feature of type feature_name onto the map either from a file or from a geodataframe given by gdf
 
@@ -2085,24 +2082,24 @@ class CoastSeg_Map:
             feature_name (str): name of feature must be one of the following
             "shoreline","transects","bbox","rois"
             file (str, optional): geojson file containing feature. Defaults to "".
-            gdf (gpd.GeoDataFrame, optional): geodataframe containing feature geometry. Defaults to None.
+            geometry (gpd.GeoDataFrame, optional): geodataframe containing feature geometry. Defaults to None.
         """
+        # maybe the factory should be able to load from files??
+        # If gdf is a geodataframe or dict use factory to create feature from it
+        # if gdf is a filepath then load the geodataframe from the file
+        # then call map controller add_feature_to_map with new feature and feature name\
+            
         # Load GeoDataFrame if file is provided
         if file:
-            gdf = geodata_processing.load_geodataframe_from_file(
+            geometry = geodata_processing.load_geodataframe_from_file(
                 file, feature_type=feature_name
             )
-        # Ensure the gdf is not empty
-        if gdf is not None and gdf.empty:
-            logger.info(f"No {feature_name} was loaded on map")
-            return
-
         # create the feature
-        new_feature = self.factory.make_feature(self, feature_name, gdf, **kwargs)
+        new_feature = self.factory.make_feature(self, feature_name, geometry, **kwargs)
         if new_feature is None:
             return
 
-        logger.info(f"new_feature: {new_feature} \ngdf: {gdf}")
+        logger.info(f"new_feature: {new_feature} \ngeometry: {geometry}")
 
         # load the features onto the map
         self.add_feature_on_map(
