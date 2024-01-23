@@ -36,13 +36,39 @@ from coastseg import exceptions
 from coastseg.validation import find_satellite_in_filename
 from coastseg import file_utilities
 from coastseg.exceptions import InvalidGeometryType
-
 # widget icons from https://fontawesome.com/icons/angle-down?s=solid&f=classic
 
 # Logger setup
 logger = logging.getLogger(__name__)
 
 
+def get_missing_roi_dirs(roi_settings: dict, roi_ids: list = None) -> dict:
+    """
+    Get the missing ROI directories based on the provided ROI settings and data path.
+
+    Args:
+        roi_settings (dict): A dictionary containing ROI settings.
+        roi_ids (list, optional): A list of ROI IDs to check. If not provided, all ROIs in roi_settings are checked. Defaults to None.
+
+    Returns:
+        dict: A dictionary containing the missing ROI directories, where the key is the ROI ID and the value is the sitename.
+    """
+    missing_directories = {}
+
+    # If roi_ids is not provided, check all ROIs in roi_settings
+    if roi_ids is None:
+        roi_ids = roi_settings.keys()
+
+    for roi_id in roi_ids:
+        item = roi_settings.get(roi_id, {})
+        sitename = item.get("sitename", "")
+        filepath = item.get("filepath", "")
+        roi_path = os.path.join(filepath, sitename)
+
+        if not os.path.exists(roi_path):
+            missing_directories[roi_id] = sitename
+
+    return missing_directories
 
 def initialize_gee(
     auth_mode: str = "localhost",
@@ -344,13 +370,14 @@ def load_settings(
         "multiple_inter",
         "prc_multiple",
     ),
+    new_settings: dict={},
 ):
     """
     Loads settings from a JSON file and applies them to the object.
     Args:
         filepath (str, optional): The filepath to the JSON file containing the settings. Defaults to an empty string.
         keys (list or set, optional): A list of keys specifying which settings to load from the JSON file. If empty, no settings are loaded. Defaults to a set with the following
-        "sat_list",
+                                                    "sat_list",
                                                     "dates",
                                                     "cloud_thresh",
                                                     "cloud_mask_issue",
@@ -369,16 +396,20 @@ def load_settings(
                                                     "min_chainage",
                                                     "multiple_inter",
                                                     "prc_multiple".
+        new_settings(dict, optional): A dictionary containing new settings to apply to the object. Defaults to an empty dictionary.
     Returns:
         None
     """
     # Convert keys to a list if a set is passed
     if isinstance(keys, set):
         keys = list(keys)
-    new_settings = file_utilities.read_json_file(filepath, raise_error=False)
-    logger.info(
-        f"all of new settings read from file : {filepath} \n {new_settings.keys()}"
-    )
+    if filepath:
+        new_settings = file_utilities.read_json_file(filepath, raise_error=False)
+        logger.info(
+            f"all of new settings read from file : {filepath} \n {new_settings.keys()}"
+        )
+    elif new_settings:
+        logger.info(f"all of new settings read from dict : {new_settings.keys()}") 
     # if no keys are passed then use all of the keys in the settings file
     if not keys:
         keys = new_settings.keys()
@@ -393,31 +424,6 @@ def load_settings(
     # combine the settings into one dictionary WARNING this could overwrite items in both settings
     filtered_settings.update(**nested_settings)
     return filtered_settings
-
-
-# def remove_rows(selected_items, gdf):
-#     """
-#     Remove rows from a GeoDataFrame based on selected items.
-
-#     Args:
-#         selected_items (list): List of selected items in the format "satname_dates".
-#         gdf (GeoDataFrame): Input GeoDataFrame.
-
-#     Returns:
-#         GeoDataFrame: GeoDataFrame with rows removed based on the selected items.
-#     """
-#     # Loop through each dictionary in dates_tuple
-#     for criteria in list(selected_items):
-#         satname, dates = criteria.split("_")
-#         # Convert the dates string to a Timestamp object
-#         dates_obj = datetime.strptime(dates, "%Y-%m-%d %H:%M:%S")
-#         # Use boolean indexing to select the rows that match the criteria
-#         mask = (gdf["date"] == dates_obj) & (gdf["satname"] == satname)
-#         # Drop the rows that match the criteria
-#         gdf = gdf.drop(gdf[mask].index)
-#     # Return the new GeoDataFrame
-#     gdf["date"] = gdf["date"].dt.strftime("%Y-%m-%d %H:%M:%S")
-#     return gdf
 
 
 def remove_matching_rows(gdf: gpd.GeoDataFrame, **kwargs) -> gpd.GeoDataFrame:
@@ -1624,7 +1630,7 @@ def create_warning_box(
     msg: str = None,
     instructions: str = None,
     msg_width: str = "75%",
-    box_width: str = "50%",
+    box_width: str = "60%",
 ) -> HBox:
     """
     Creates a warning box with a title and message that can be closed with a close button.
@@ -1648,16 +1654,15 @@ def create_warning_box(
     if instructions is None:
         instructions = ""
     warning_msg = HTML(
-        f"<div style='max-height: 250px; overflow-x: hidden; overflow-y: visible; text-align: center;'>"
+        f"<div style='max-height: 250px; overflow-x: hidden; overflow-y:  auto; text-align: center;'>"
         f"<span style='color: red'>⚠️</span>{msg}"
         f"</div>"
     )
     instructions_msg = HTML(
-        f"<div style='max-height: 210px; overflow-x: hidden; overflow-y: visible; text-align: center;'>"
+        f"<div style='max-height: 210px; overflow-x: hidden; overflow-y:  auto; text-align: center;'>"
         f"<span style='color: red'></span>{instructions}"
         f"</div>"
     )
-
     x_button = ToggleButton(
         value=False,
         tooltip="Close Warning Box",
@@ -1678,7 +1683,7 @@ def create_warning_box(
     # create vertical box to hold title and msg
     warning_content = VBox(
         [warning_title, warning_msg, instructions_msg, close_button],
-        layout=Layout(width=msg_width, max_width="95%"),
+        layout=Layout(width=msg_width, max_width="95%",padding='0px 0px 10px 0px',margin='4px 4px 4px 4px'),
     )
 
     def close_click(change):
@@ -1692,7 +1697,7 @@ def create_warning_box(
     x_button.observe(close_click, "value")
     warning_box = HBox(
         [warning_content, x_button],
-        layout=Layout(width=box_width, border="2px solid red"),
+        layout=Layout(width=box_width, height='100%', border="4px solid red"),
     )
     return warning_box
 
@@ -1857,7 +1862,7 @@ def get_area(polygon: dict) -> float:
     return round(area(polygon), 3)
 
 
-def extract_roi_data(json_data: dict, roi_id: str, fields_of_interest: list = []):
+def extract_roi_data(json_data: dict, roi_id: str, fields_of_interest: list = None):
     """
     Extracts the specified fields for a specific ROI from a JSON data dictionary.
 
@@ -1880,7 +1885,7 @@ def extract_roi_data(json_data: dict, roi_id: str, fields_of_interest: list = []
     return roi_data
 
 
-def extract_fields(data: dict, key=None, fields_of_interest=None):
+def extract_fields(data: dict, key=None, fields_of_interest:list=None)->dict:
     """
     Extracts specified fields from a given dictionary.
 
@@ -2561,7 +2566,7 @@ def do_rois_have_sitenames(roi_settings: dict, roi_ids: list) -> bool:
 
 
 def were_rois_downloaded(roi_settings: dict, roi_ids: list) -> bool:
-    """Returns true if rois were downloaded before. False if they have not
+    """Returns true if rois were downloaded before. False if they have not.
     Uses 'sitename' key for each roi to determine if roi was downloaded.
     And checks if filepath were roi is saved is valid
     If each roi's 'sitename' is not empty string returns true
