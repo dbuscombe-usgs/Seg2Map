@@ -21,7 +21,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 def config_json_no_sitename_dir():
     # create a temporary directory that will represent the downloaded ROI directory
     temp_dir = tempfile.mkdtemp()
-    # Create don't create the subdirectory in this temporary directory
+    # Don't create the subdirectory in this temporary directory with the sitename
 
     # The dictionary you want to write to the JSON file
     config_data = {

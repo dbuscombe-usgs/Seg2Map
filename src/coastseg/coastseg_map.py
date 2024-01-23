@@ -272,7 +272,7 @@ class CoastSeg_Map:
 
     def _init_info_boxes(self):
         """Initialize info and warning boxes for the map."""
-        self.warning_box = HBox([])
+        self.warning_box = HBox([],layout=Layout(height='242px'))
         self.warning_widget = WidgetControl(widget=self.warning_box, position="topleft")
         self.map.add(self.warning_widget)
 
@@ -925,65 +925,48 @@ class CoastSeg_Map:
 
         logger.info("Done downloading")
 
-    def _extract_and_validate_roi_settings(
-        self, json_data: dict, data_path: str, fields_of_interest: set = set()
-    ) -> dict:
-        """
-        Extracts ROI (Region of Interest) settings from the provided JSON data and validates
-        the existence of directories corresponding to each ROI's sitename.
+    def extract_roi_settings(
+            self, json_data: dict, data_path: str, fields_of_interest: set = set()
+        ) -> dict:
+            """
+            Extracts the settings for regions of interest (ROI) from the given JSON data.
+            Overwrites the filepath attribute for each ROI with the data_path provided.
 
-        This function iterates over ROI IDs in the JSON data, extracts settings relevant to
-        each ROI (based on fields of interest), and checks if directories for each ROI exist
-        at the provided data path.
+            Args:
+                json_data (dict): The JSON data containing ROI information.
+                data_path (str): The path to the data directory.
+                fields_of_interest (set, optional): A set of fields to include in the ROI settings.
+                    Defaults to an empty set.
 
-        Args:
-            json_data (dict): A dictionary containing settings and other data for multiple ROIs.
-            data_path (str): The base path where directories corresponding to each ROI's sitename should exist.
-            fields_of_interest (set, optional): A set of fields to extract from the JSON data for each ROI.
-                If not provided, a default set of fields will be used.
+            Returns:
+                dict: A dictionary containing the ROI settings, where the keys are ROI IDs and
+                    the values are dictionaries containing the fields of interest for each ROI.
+            """
+            fields_of_interest = fields_of_interest.union(
+                {
+                    "dates",
+                    "sitename",
+                    "polygon",
+                    "roi_id",
+                    "sat_list",
+                    "landsat_collection",
+                    "filepath",
+                }
+            )
 
-        Returns:
-            dict: A dictionary mapping ROI IDs to their extracted settings.
+            roi_settings = {}
+            # each roi id missing the downloaded directory
 
-        Raises:
-            MissingDirectoriesError: If one or more directories specified in the extracted settings are missing.
+            for roi_id in json_data.get("roi_ids", []):
+                # create a dictionary containing the fields of interest for the ROI with the roi_id
+                roi_data = common.extract_roi_data(json_data, roi_id, fields_of_interest)
+                # get the name of the downloaded ROI directory
+                # filepath tells coastseg the parent directory containing the ROI directory eg. /path/to/data
+                # this overwrites the default filepath with data_path provided so that the user can load data downloaded by someone else
+                roi_data["filepath"] = data_path
+                roi_settings[str(roi_id)] = roi_data
 
-        Note:
-            If new entries are added to the provided `fields_of_interest` set, they will be
-            merged with the default fields set. If not provided, the function will use the default set.
-        """
-        fields_of_interest = fields_of_interest.union(
-            {
-                "dates",
-                "sitename",
-                "polygon",
-                "roi_id",
-                "sat_list",
-                "landsat_collection",
-                "filepath",
-            }
-        )
-
-        roi_settings = {}
-        missing_directories = []
-
-        for roi_id in json_data.get("roi_ids", []):
-            # create a dictionary containing the fields of interest for the ROI with the roi_id
-            roi_data = common.extract_roi_data(json_data, roi_id, fields_of_interest)
-            sitename = roi_data.get("sitename", "")
-            roi_path = os.path.join(data_path, sitename)
-
-            roi_data["filepath"] = data_path
-
-            if not os.path.exists(roi_path):
-                missing_directories.append(sitename)
-
-            roi_settings[str(roi_id)] = roi_data
-
-        # Check for missing directories
-        exception_handler.check_if_dirs_missing(missing_directories)
-
-        return roi_settings
+            return roi_settings
 
     def load_json_config(self, filepath: str, data_path: str) -> None:
         """
@@ -1010,20 +993,26 @@ class CoastSeg_Map:
 
         json_data = file_utilities.read_json_file(filepath, raise_error=True)
         json_data = json_data or {}
-
         # Replace coastseg_map.settings with settings from config file
         settings = common.load_settings(
-            filepath,
+            new_settings=json_data,
         )
         self.set_settings(**settings)
 
         # creates a dictionary mapping ROI IDs to their extracted settings from json_data
-        roi_settings = self._extract_and_validate_roi_settings(json_data, data_path)
+        roi_settings = self.extract_roi_settings(json_data, data_path)
         # Make sure each ROI has the specific settings for its save location, its ID, coordinates etc.
         if hasattr(self, "rois"):
             self.rois.roi_settings = roi_settings
+        # update the config.json file for each ROI
+        self.update_downloaded_configs(roi_settings)
         logger.info(f"roi_settings: {roi_settings}")
+        # check if any of the ROIs were missing in in the data directory
+        missing_directories = common.get_missing_roi_dirs(roi_settings)
+        # raise a warning message if any of the ROIs were missing in the data directory
+        exception_handler.check_if_dirs_missing(missing_directories,data_path)
 
+    
     def load_config_files(self, dir_path: str, data_path: str) -> None:
         """Loads the configuration files from the specified directory
             Loads config_gdf.geojson first, then config.json.
@@ -1039,6 +1028,7 @@ class CoastSeg_Map:
         config_geojson_path = os.path.join(dir_path, "config_gdf.geojson")
         config_json_path = os.path.join(dir_path, "config.json")
 
+        # if config_gdf.geojson does not exist, then this might be the wrong directory
         if not file_utilities.file_exists(config_geojson_path, "config_gdf.geojson"):
             return False
 
@@ -1049,11 +1039,58 @@ class CoastSeg_Map:
         # load the config files
         # load general settings from config.json file
         self.load_gdf_config(config_geojson_path)
+        # overwrites the filepath attribute for each ROI with the data_path provided
         self.load_json_config(config_json_path, data_path)
+
         # return true if both config files exist
         return True
 
-    def save_config(self, filepath: str = None) -> None:
+    def update_downloaded_configs(self,roi_settings:dict=None,roi_ids:list=None,data_path:str=None):
+        """
+        Update the downloaded configuration files for the specified ROI(s).
+        Args:
+            roi_settings (dict, optional): Dictionary containing the ROI settings. Defaults to None.
+                ROI settings should contain the ROI IDs as the keys and a dictionary of settings as the values.
+                Each ROI ID should have the following keys: "dates", "sitename", "polygon", "roi_id", "sat_list", "landsat_collection", "filepath"
+            roi_ids (list, optional): List of ROI IDs to update. Defaults to None.
+            data_path (str, optional): Path to the data directory. Defaults to None.
+        """
+        # Update the config.json if the ROI was downloaded before on another computer
+        print(roi_settings)
+        if not data_path:
+            data_path = file_utilities.create_directory(os.getcwd(), "data")
+        if not roi_ids:
+            roi_ids = roi_settings.keys()
+        # 1. validate the ROI settings are correct and update the filepath if ROI was downloaded on another computer
+        for roi_id in roi_ids:
+            # write config_json file to each directory where a roi was saved
+            if not roi_settings.get(roi_id, {}):
+                continue 
+            sitename = str(roi_settings[roi_id].get("sitename",""))
+            #2. if the filepath for this ROI ID doesn't exists then set it to the data_path
+            if not os.path.exists(roi_settings[roi_id].get("filepath","")):
+                roi_settings[roi_id]["filepath"] = data_path
+        # 3. update the config.json file for each ROI  
+        for roi_id in roi_ids:  
+            if not roi_settings.get(roi_id, {}):
+                continue   
+            # attempt to load the config file for the ROI
+            sitename = str(roi_settings[roi_id].get("sitename",""))
+            config_json_path = os.path.join(roi_settings[roi_id].get("filepath",""), sitename, "config.json")
+            if os.path.exists(config_json_path):
+                # load the current contents of the config.json file
+                config_json = file_utilities.read_json_file(config_json_path)
+                # 4. Update the ROI data for each ROI in config.json
+                for roi_id in roi_ids:
+                    roi_settings[roi_id] = roi_settings.get(roi_id, {})
+                    if config_json.get(roi_id,{}):
+                        config_json[roi_id] = roi_settings[roi_id]
+                        
+                config_path = os.path.join(roi_settings[roi_id].get("filepath",""), sitename)
+                file_utilities.config_to_file(config_json, config_path)
+                print(f"Updated config files for ROI {roi_id} at {config_json_path}")
+                
+    def save_config(self, filepath: str = None,selected_only:bool=True,data_path:str=None) -> None:
         """saves the configuration settings of the map into two files
             config.json and config_gdf.geojson
             Saves the inputs such as dates, landsat_collection, satellite list, and ROIs
@@ -1083,8 +1120,11 @@ class CoastSeg_Map:
             )
             self.rois.set_roi_settings(roi_settings)
 
-        # create dictionary of settings for each ROI to be saved to config.json
-        roi_ids = self.get_roi_ids(is_selected=True)
+        roi_ids = self.get_roi_ids()
+        if selected_only:
+            # create dictionary of settings for each ROI to be saved to config.json
+            roi_ids = self.get_roi_ids(is_selected=True)
+        
         selected_roi_settings = {
             roi_id: self.rois.roi_settings[roi_id] for roi_id in roi_ids
         }
@@ -1119,8 +1159,9 @@ class CoastSeg_Map:
             file_utilities.config_to_file(config_gdf, path)
 
         if filepath:
-            # If a filepath is provided then save the config.json and config_gdf.geojson immediately
+            # save the config.json and config_gdf.geojson immediately to the filepath directory
             save_config_files(config_json, config_gdf, filepath)
+            print(f"Saved config files to {filepath}")
         else:
             is_downloaded = common.were_rois_downloaded(self.rois.roi_settings, roi_ids)
             # if  data has been downloaded before then inputs have keys 'filepath' and 'sitename'
@@ -1549,19 +1590,24 @@ class CoastSeg_Map:
         # if none of the selected ROIs on the map have had their shorelines extracted throw an error
         exception_handler.check_if_list_empty(roi_ids)
 
+
+
     def validate_extract_shoreline_inputs(self):
         # ROIs,settings, roi-settings cannot be None or empty
         settings = self.get_settings()
         exception_handler.check_if_empty_string(self.get_session_name(), "session name")
         # ROIs, transects,shorelines and a bounding box must exist
-        exception_handler.check_if_None(self.rois, "ROIs")
-        exception_handler.check_if_None(self.shoreline, "shoreline")
-        exception_handler.check_if_None(self.transects, "transects")
-        exception_handler.check_if_None(self.bbox, "bounding box")
+        exception_handler.validate_feature(self.rois, "roi")
+        exception_handler.validate_feature(self.shoreline, "shoreline")
+        exception_handler.validate_feature(self.transects, "transects")
+        exception_handler.validate_feature(self.bbox, "bounding box")
         # ROI settings must not be empty
-        exception_handler.check_empty_dict(self.rois.roi_settings, "roi_settings")
+        if hasattr(self.rois, "roi_settings"):
+            exception_handler.check_empty_dict(self.rois.roi_settings, "roi_settings")
+        else:
+            raise Exception("None of the ROIs have been downloaded on this machine or the location where they were downloaded has been moved. Please download the ROIs again.")
 
-        # settings must contain keys in subset
+        # settings must contain keys "dates", "sat_list", "landsat_collection"
         superset = set(list(settings.keys()))
         exception_handler.check_if_subset(
             set(["dates", "sat_list", "landsat_collection"]), superset, "settings"
@@ -1576,12 +1622,36 @@ class CoastSeg_Map:
         exception_handler.check_if_subset(
             self.selected_set, superset, "roi_settings", error_message
         )
-        # raise error if selected rois were not downloaded
-        exception_handler.check_if_rois_downloaded(
-            self.rois.roi_settings, self.get_roi_ids(is_selected=True)
-        )
+        # get only the rois with missing directories that are selected on the map
+        roi_ids = self.get_roi_ids(is_selected=True)
+        # check if any of the ROIs are missing their downloaded data directory
+        missing_directories = common.get_missing_roi_dirs(self.rois.roi_settings,roi_ids)
+        # raise an warning if any of the selected ROIs were not downloaded 
+        exception_handler.check_if_dirs_missing(missing_directories)
+        # # check if any of the ROIs are missing their downloaded data directory
+        # missing_directories = common.get_missing_roi_dirs(self.rois.roi_settings)
+        # # get only the rois with missing directories that are selected on the map
+        # roi_ids = list(self.selected_set)
+        # missing_rois = {}
+        # for roi_id in roi_ids:
+        #     if roi_id in missing_directories:
+        #         missing_rois[roi_id] = missing_directories[roi_id]
+            
+        # # get the roi settings and check if they all exist at the filepaths in the settings
+        # exception_handler.check_if_dirs_missing(missing_rois)
+        
 
     def validate_download_imagery_inputs(self):
+        """
+        Validates the inputs required for downloading imagery.
+
+        This method checks if the necessary settings are present and if the selected layer contains the selected ROI.
+
+        Raises:
+            SubsetError: If the required settings keys are not present in the settings.
+            EmptyLayerError: If the selected layer is empty.
+            EmptyROILayerError: If the selected layer does not contain any ROI.
+        """
         # settings cannot be None
         settings = self.get_settings()
         # Ensure the required keys are present in the settings
@@ -1635,15 +1705,13 @@ class CoastSeg_Map:
         Returns:
             None
         """
+        # 1. validate the inputs for shoreline extraction exist: ROIs, transects,shorelines and a downloaded data for each ROI
         self.validate_extract_shoreline_inputs()
         roi_ids = self.get_roi_ids(is_selected=True)
         logger.info(f"roi_ids to extract shorelines from: {roi_ids}")
-        # update the settings with the most accurate epsg
+        #2. update the settings with the most accurate epsg
         self.update_settings_with_accurate_epsg()
-        # update configs with new output_epsg
-        self.save_config()
-
-        # get selected ROIs on map and extract shoreline for each of them
+        #3. get selected ROIs on map and extract shoreline for each of them
         for roi_id in tqdm(roi_ids, desc="Extracting Shorelines"):
             print(f"Extracting shorelines from ROI with the id:{roi_id}")
             extracted_shorelines = self.extract_shoreline_for_roi(
@@ -1651,10 +1719,11 @@ class CoastSeg_Map:
             )
             self.rois.add_extracted_shoreline(extracted_shorelines, roi_id)
 
-        # save the ROI IDs that had extracted shoreline to observable variable roi_ids_with_extracted_shorelines
+        #4. save the ROI IDs that had extracted shoreline to observable variable roi_ids_with_extracted_shorelines
         ids_with_extracted_shorelines = self.get_roi_ids(
             is_selected=False, has_shorelines=True
         )
+        # update the available ROI IDs and this will update the extracted shorelines on the map
         if ids_with_extracted_shorelines is None:
             self.id_container.ids = []
         elif not isinstance(ids_with_extracted_shorelines, list):
@@ -1662,10 +1731,10 @@ class CoastSeg_Map:
         else:
             self.id_container.ids = ids_with_extracted_shorelines
 
-        # save a session for each ROI under one session name
+        #4. save a session for each ROI under one session name
         self.save_session(roi_ids, save_transects=False)
 
-        # Get ROI ids that are selected on map and have had their shorelines extracted
+        #6. Get ROI ids that are selected on map and have had their shorelines extracted, and compute transects for them
         roi_ids = self.get_roi_ids(is_selected=True, has_shorelines=True)
         if hasattr(self.transects, "gdf"):
             self.compute_transects(self.transects.gdf, self.get_settings(), roi_ids)
