@@ -502,7 +502,7 @@ class CoastSeg_Map:
             exception_handler.handle_exception(
                 e,
                 self.warning_box,
-                title="Tide Model Not Found Error",
+                title="Tide Model Error",
                 msg=str(e),
             )
         else:
