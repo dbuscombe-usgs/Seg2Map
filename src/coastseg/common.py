@@ -42,6 +42,108 @@ from coastseg.exceptions import InvalidGeometryType
 logger = logging.getLogger(__name__)
 
 
+def update_downloaded_configs(roi_settings:dict=None,roi_ids:list=None,data_path:str=None):
+    """
+    Update the downloaded configuration files for the specified ROI(s).
+    Args:
+        roi_settings (dict, optional): Dictionary containing the ROI settings. Defaults to None.
+            ROI settings should contain the ROI IDs as the keys and a dictionary of settings as the values.
+            Each ROI ID should have the following keys: "dates", "sitename", "polygon", "roi_id", "sat_list", "landsat_collection", "filepath"
+        roi_ids (list, optional): List of ROI IDs to update. Defaults to None.
+        data_path (str, optional): Path to the data directory. Defaults to None.
+    """
+    if not data_path:
+        raise ValueError("The data_path argument must be provided.")
+    roi_ids = roi_ids or list(roi_settings.keys())
+    
+    # update the config.json file for each ROI 
+    for roi_id in roi_ids:
+        roi_data = roi_settings.get(roi_id)
+        if not roi_data:
+            logging.warning(f"No settings found for ROI {roi_id}. Skipping.")
+            continue
+        #1. attempt to load the config file for the ROI located at the filepath
+        sitename = str(roi_data.get("sitename", ""))
+        config_json_path = os.path.join(roi_data.get("filepath", ""), sitename, "config.json")
+        if not os.path.exists(config_json_path):
+            logging.warning(f"Config file not found for ROI {roi_id} at {config_json_path}. Skipping.")
+            continue
+        # 2. update the config file located in the ROI's downloaded location and overwrite the existing file
+        try:
+            # 3.load the current contents of the config.json file
+            config_json = file_utilities.read_json_file(config_json_path)
+            # 4. Update the ROI data for each ROI in config.json
+            for roi_id in roi_ids:
+                roi_settings[roi_id] = roi_settings.get(roi_id, {})
+                if config_json.get(roi_id,{}):
+                    config_json[roi_id] = roi_settings[roi_id]
+            # 5. save the updated config.json file to the ROI's downloaded location
+            config_path = os.path.join(roi_data.get("filepath", ""), sitename)
+            print(config_path)
+            print(f"ROI ID {roi_id} : config_json {config_json} ")
+            # return config_json
+            file_utilities.config_to_file(config_json, config_path)
+            logging.info(f"Updated config files for ROI {roi_id} at {config_json_path}")
+        except IOError as e:
+            logging.error(f"Failed to update config for ROI {roi_id}: {e}")
+
+def extract_roi_settings(json_data: dict,fields_of_interest: set = set(),roi_ids: list = None) -> dict:
+    """
+    Extracts the settings for regions of interest (ROI) from the given JSON data.
+    Overwrites the filepath attribute for each ROI with the data_path provided.
+    Args:
+        json_data (dict): The JSON data containing ROI information.
+        data_path (str): The path to the data directory.
+        fields_of_interest (set, optional): A set of fields to include in the ROI settings.
+            Defaults to an empty set.
+    Returns:
+        dict: A dictionary containing the ROI settings, where the keys are ROI IDs and
+            the values are dictionaries containing the fields of interest for each ROI.
+    """
+    if not fields_of_interest:
+        fields_of_interest = {
+                "dates",
+                "sitename",
+                "polygon",
+                "roi_id",
+                "sat_list",
+                "landsat_collection",
+                "filepath",
+            }
+    if not roi_ids:
+        roi_ids = json_data.get("roi_ids", [])
+    roi_settings = {}
+    for roi_id in roi_ids:
+        # create a dictionary containing the fields of interest for the ROI with the roi_id
+        roi_data = extract_roi_data(json_data, roi_id, fields_of_interest)
+        roi_settings[str(roi_id)] = roi_data
+    return roi_settings
+
+def update_roi_settings(roi_settings, key, value):
+    """
+    Updates the settings for a region of interest (ROI) in the given ROI settings dictionary.
+
+    Args:
+        roi_settings (dict): A dictionary containing the ROI settings.
+        key (str): The key of the ROI settings to update.
+        value (Any): The new value for the specified key.
+
+    Returns:
+        dict: The updated ROI settings dictionary.
+
+    """
+    for roi_id, settings in roi_settings.items():
+        settings[key] = value
+    return roi_settings
+
+def process_roi_settings(json_data, data_path):
+    roi_ids = json_data.get("roi_ids", [])
+    # creates a dictionary mapping ROI IDs to their extracted settings from json_data
+    roi_settings = extract_roi_settings(json_data, roi_ids=roi_ids)
+    # update the filepath to be the data_path which is the /data directory on the current machine
+    roi_settings = update_roi_settings(roi_settings, 'filepath', data_path)
+    return roi_settings
+
 def get_missing_roi_dirs(roi_settings: dict, roi_ids: list = None) -> dict:
     """
     Get the missing ROI directories based on the provided ROI settings and data path.
@@ -1900,15 +2002,6 @@ def extract_fields(data: dict, key=None, fields_of_interest:list=None)->dict:
 
     """
     extracted_data = {}
-    fields_of_interest = fields_of_interest or {
-        "dates",
-        "sitename",
-        "polygon",
-        "roi_id",
-        "sat_list",
-        "landsat_collection",
-        "filepath",
-    }
     # extract the data from a sub dictionary with a specified key if it exists
     if key and key in data:
         for field in fields_of_interest:
