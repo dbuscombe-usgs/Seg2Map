@@ -20,7 +20,229 @@ from unittest.mock import patch
 import pytest
 from coastseg import common
 from typing import Dict, List, Union
+from unittest.mock import patch
 
+def test_empty_roi_ids_and_json_data():
+    extracted_settings = common.extract_roi_settings({}, roi_ids=[])
+    assert extracted_settings == {}
+
+def test_custom_fields_of_interest():
+    json_data = {
+        "roi_ids": ["roi1"],
+        "roi1": {
+            "dates": "2020-01-01",
+            "sitename": "Site1",
+            "custom_field": "value"
+        }
+    }
+    fields_of_interest = {"dates", "custom_field"}
+    extracted_settings = common.extract_roi_settings(json_data, fields_of_interest)
+    assert  set(fields_of_interest).issubset(set(extracted_settings["roi1"].keys()))
+
+def test_default_fields_of_interest():
+    json_data = {
+        "roi_ids": ["vnv5"],
+        "vnv5": {
+            "polygon": [
+            [
+                [-73.79437084401454, 40.604969508734285],
+                [-73.79437084401454, 40.58122710499745],
+                [-73.76134532936206, 40.58122710499745],
+                [-73.76134532936206, 40.604969508734285],
+                [-73.79437084401454, 40.604969508734285]
+            ]
+            ],
+            "sat_list": ["L8"],
+            "landsat_collection": "C02",
+            "dates": ["2017-12-01", "2018-01-01"],
+            "sitename": "ID_vnv5_datetime01-10-24__01_15_42",
+            "filepath": "C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "roi_id": "vnv5"
+        },
+    }
+    expected_fields = set(["dates", "sitename", "polygon", "roi_id", "sat_list", "landsat_collection", "filepath"])
+    extracted_settings = common.extract_roi_settings(json_data)
+    assert set(extracted_settings["vnv5"].keys()) == expected_fields
+
+def test_specific_roi_ids():
+    json_data = {
+        "roi_ids": ["vnv5"],
+        "vnv5": {
+            "polygon": [
+            [
+                [-73.79437084401454, 40.604969508734285],
+                [-73.79437084401454, 40.58122710499745],
+                [-73.76134532936206, 40.58122710499745],
+                [-73.76134532936206, 40.604969508734285],
+                [-73.79437084401454, 40.604969508734285]
+            ]
+            ],
+            "sat_list": ["L8"],
+            "landsat_collection": "C02",
+            "dates": ["2017-12-01", "2018-01-01"],
+            "sitename": "ID_vnv5_datetime01-10-24__01_15_42",
+            "filepath": "C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "roi_id": "vnv5"
+        },
+        "vnv6": {
+            "polygon": [
+            [
+                [-73.79437084401454, 40.604969508734285],
+                [-73.79437084401454, 40.58122710499745],
+                [-73.76134532936206, 40.58122710499745],
+                [-73.76134532936206, 40.604969508734285],
+                [-73.79437084401454, 40.604969508734285]
+            ]
+            ],
+            "sat_list": ["L8"],
+            "landsat_collection": "C02",
+            "dates": ["2017-12-01", "2018-01-01"],
+            "sitename": "ID_vnv6_datetime01-10-24__01_15_42",
+            "filepath": "C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "roi_id": "vnv6"
+        }
+    }
+    roi_ids = ["vnv6"]
+    extracted_settings = common.extract_roi_settings(json_data, roi_ids=roi_ids)
+    assert "vnv6" in extracted_settings and "vnv5" not in extracted_settings
+
+def test_missing_fields_in_json_data():
+    # test what happens if a field like sitename is missing
+    json_data = {
+        "roi_ids": ["vnv5"],
+        "vnv5": {
+            "polygon": [
+            [
+                [-73.79437084401454, 40.604969508734285],
+                [-73.79437084401454, 40.58122710499745],
+                [-73.76134532936206, 40.58122710499745],
+                [-73.76134532936206, 40.604969508734285],
+                [-73.79437084401454, 40.604969508734285]
+            ]
+            ],
+            "sat_list": ["L8"],
+            "landsat_collection": "C02",
+            "dates": ["2017-12-01", "2018-01-01"],
+            "filepath": "C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "roi_id": "vnv5"
+        }
+    }
+    extracted_settings = common.extract_roi_settings(json_data)
+    assert "sitename" not in extracted_settings["vnv5"]
+    assert "dates" in extracted_settings["vnv5"] 
+    assert "polygon" in extracted_settings["vnv5"]
+    assert "sat_list" in extracted_settings["vnv5"]
+    assert "landsat_collection" in extracted_settings["vnv5"]
+    assert "dates" in extracted_settings["vnv5"]
+    assert "filepath" in extracted_settings["vnv5"]
+    assert "roi_id" in extracted_settings["vnv5"]
+
+
+def test_update_existing_key():
+    roi_settings = {
+        'roi1': {'key1': 'value1', 'key2': 'value2'},
+        'roi2': {'key1': 'value3', 'key2': 'value4'}
+    }
+    updated_settings = common.update_roi_settings(roi_settings, 'key1', 'new_value')
+    assert all(settings['key1'] == 'new_value' for settings in updated_settings.values())
+
+def test_update_non_existing_key():
+    roi_settings = {
+        'roi1': {'key2': 'value2'},
+        'roi2': {'key2': 'value4'}
+    }
+    updated_settings = common.update_roi_settings(roi_settings, 'key1', 'new_value')
+    assert all('key1' not in settings for settings in updated_settings.values())
+
+def test_empty_roi_settings():
+    updated_settings = common.update_roi_settings({}, 'key1', 'new_value')
+    assert updated_settings == {}
+
+def test_multiple_roi_ids():
+    roi_settings = {
+        'roi1': {'key1': 'value1'},
+        'roi2': {'key1': 'value3'},
+        'roi3': {'key1': 'value5'}
+    }
+    updated_settings = common.update_roi_settings(roi_settings, 'key1', 'new_value')
+    assert all(settings['key1'] == 'new_value' for settings in updated_settings.values())
+
+def test_non_dict_roi_settings():
+    with pytest.raises(AttributeError):
+        common.update_roi_settings("not_a_dict", 'key1', 'new_value')
+
+def test_ioerror_during_file_update():
+    roi_settings = {'roi1': {'filepath': 'path/to/roi1', 'sitename': 'Site1'}}
+    roi_ids = ['roi1']
+    with patch('os.path.exists') as mock_exists, \
+         patch('coastseg.file_utilities.read_json_file') as mock_read, \
+         patch('coastseg.file_utilities.config_to_file') as mock_write, \
+         patch('coastseg.common.logging') as mock_logging:
+        mock_exists.return_value = True
+        mock_read.return_value = {}
+        mock_write.side_effect = IOError
+        
+        common.update_downloaded_configs(roi_settings=roi_settings, roi_ids=roi_ids, data_path='dummy_path')
+        
+        mock_logging.error.assert_called()
+
+
+def test_successful_update():
+    roi_settings = {'roi1': {'filepath': 'path/to/roi1', 'sitename': 'Site1'}}
+    roi_ids = ['roi1']
+    with patch('os.path.exists') as mock_exists, \
+         patch('coastseg.file_utilities.read_json_file') as mock_read, \
+         patch('coastseg.file_utilities.config_to_file') as mock_write:
+        mock_exists.return_value = True
+        mock_read.return_value = {}
+        
+        common.update_downloaded_configs(roi_settings=roi_settings, roi_ids=roi_ids, data_path='dummy_path')
+        
+        mock_write.assert_called_once()
+
+def test_config_file_not_found():
+    roi_settings = {'roi1': {'filepath': 'path/to/roi1', 'sitename': 'Site1'}}
+    roi_ids = ['roi1']
+    with patch('os.path.exists') as mock_exists, \
+         patch('coastseg.common.logging') as mock_logging:
+        mock_exists.return_value = False
+        
+        common.update_downloaded_configs(roi_settings=roi_settings, roi_ids=roi_ids, data_path='dummy_path')
+        
+        mock_logging.warning.assert_called()
+
+def test_nonexistent_roi_ids():
+    roi_settings = {'roi2': {'filepath': 'path/to/roi2', 'sitename': 'Site2'}}
+    roi_ids = ['roi1']
+    with patch('coastseg.common.logging') as mock_logging:
+        common.update_downloaded_configs(roi_settings=roi_settings, roi_ids=roi_ids, data_path='dummy_path')
+        mock_logging.warning.assert_called()
+
+
+def test_valid_roi_ids_and_settings():
+    roi_settings = {'roi1': {'filepath': 'path/to/roi1', 'sitename': 'Site1'}}
+    roi_ids = ['roi1']
+    with patch('os.path.exists') as mock_exists, \
+         patch('coastseg.file_utilities.read_json_file') as mock_read, \
+         patch('coastseg.file_utilities.config_to_file') as mock_write:
+        mock_exists.return_value = True
+        mock_read.return_value = {}
+        
+        common.update_downloaded_configs(roi_settings=roi_settings, roi_ids=roi_ids, data_path='dummy_path')
+        
+        mock_write.assert_called_once()
+
+
+def test_empty_roi_settings():
+    with patch('coastseg.file_utilities') as mock_file_utils:
+        common.update_downloaded_configs(roi_settings={}, roi_ids=[], data_path='dummy_path')
+        mock_file_utils.read_json_file.assert_not_called()
+        mock_file_utils.config_to_file.assert_not_called()
+
+
+def test_missing_data_path():
+    with pytest.raises(ValueError):
+        common.update_downloaded_configs(roi_settings={}, roi_ids=[], data_path=None)
 
 # Scenario 1: 'date' column as string
 def test_remove_matching_rows_date_string():

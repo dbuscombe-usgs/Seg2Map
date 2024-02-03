@@ -152,7 +152,7 @@ def test_load_json_config_without_rois(valid_coastseg_map_with_settings, tmp_dat
     # test if exception is raised when coastseg_map has no ROIs
     actual_coastsegmap = valid_coastseg_map_with_settings
     with pytest.raises(Exception):
-        actual_coastsegmap.load_json_config("", tmp_data_path)
+        actual_coastsegmap.load_json_config("")
 
 
 def test_load_json_config_downloaded(
@@ -167,7 +167,9 @@ def test_load_json_config_downloaded(
     actual_coastsegmap.load_feature_on_map("rois", file=valid_rois_filepath)
 
     # test if settings are correctly loaded when valid json config loaded with 'filepath' & 'sitename' keys is loaded
-    actual_coastsegmap.load_json_config(config_path, temp_dir)
+    json_data = actual_coastsegmap.load_json_config(config_path)
+    actual_coastsegmap.rois.roi_settings = common.process_roi_settings(json_data, temp_dir)
+    
     assert isinstance(actual_coastsegmap.rois.roi_settings, dict)
     actual_config = file_utilities.read_json_file(config_path)
     for roi_id in actual_config["roi_ids"]:
@@ -181,20 +183,25 @@ def test_load_json_config_downloaded(
         assert actual_coastsegmap.settings[roi_id] == item
 
 
-def test_load_json_config_when_data_path_not_exist(
-    valid_coastseg_map_with_settings,
-    valid_rois_filepath,
-    config_json_no_sitename_dir,
-):
-    config_path, temp_dir = config_json_no_sitename_dir
-    # tests if load_json_config will load contents into rois.roi_settings when rois have not been downloaded before
-    # create instance of Coastseg_Map with settings and ROIs initially loaded
-    actual_coastsegmap = valid_coastseg_map_with_settings
-    actual_coastsegmap.load_feature_on_map("rois", file=valid_rois_filepath)
-    # test if settings are correctly loaded when valid json config without 'filepath' & 'sitename' keys is loaded
-    with pytest.raises(exceptions.WarningException):
-        actual_coastsegmap.load_json_config(config_path, temp_dir)
+# I don't think this can even happen in the current version of coastseg
+# this test is a relic from when coastseg had a save_config button that allowed users to save
+# not downloaded sessions.
+# def test_load_json_config_when_data_path_not_exist(
+#     valid_coastseg_map_with_settings,
+#     valid_rois_filepath,
+#     config_json_no_sitename_dir,
+# ):
+#     config_path, temp_dir = config_json_no_sitename_dir
+#     # tests if load_json_config will load contents into rois.roi_settings when rois have not been downloaded before
+#     # create instance of Coastseg_Map with settings and ROIs initially loaded
+#     actual_coastsegmap = valid_coastseg_map_with_settings
+#     actual_coastsegmap.load_feature_on_map("rois", file=valid_rois_filepath)
+#     # test if settings are correctly loaded when valid json config without 'filepath' & 'sitename' keys is loaded
 
+#     json_data = actual_coastsegmap.load_json_config(config_path)
+#     actual_coastsegmap.roi_settings = common.process_roi_settings(json_data, temp_dir)
+#     with pytest.raises(exceptions.WarningException):
+            
 
 def test_valid_shoreline_gdf(valid_shoreline_gdf: gpd.GeoDataFrame):
     """tests if a Shoreline will be created from a valid shoreline thats a gpd.GeoDataFrame
