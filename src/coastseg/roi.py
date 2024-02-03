@@ -196,15 +196,25 @@ class ROI:
         )
 
     def get_roi_settings(self, roi_id: str = "") -> dict:
-        """Returns the settings dictionary for the specified region of interest (ROI).
+        """
+        Retrieve the settings for a specific ROI or all ROI settings.
 
         Args:
-            roi_id (str, optional): The ID of the ROI to retrieve settings for. Defaults to "".
+            roi_id (str, optional): The ID of the ROI to retrieve settings for. 
+                If not provided, all ROI settings will be returned. Defaults to "".
 
         Returns:
-            dict: A dictionary of settings for the specified ROI, or the entire ROI settings dictionary if roi_id is not provided.
+            dict: The settings for the specified ROI, or all ROI settings if no ROI ID is provided.
         """
-        return self.roi_settings if roi_id else {}
+        if roi_id in self.roi_settings:
+            logger.info(f"self.roi_settings[roi_id]: {self.roi_settings[roi_id]}")
+            return self.roi_settings[roi_id]
+        else:
+            if hasattr(self, "roi_settings"):
+                logger.info(f"self.roi_settings: {self.roi_settings}")
+                return self.roi_settings
+            else:
+                return {}
 
     def set_roi_settings(self, roi_settings: dict) -> None:
         """Sets the ROI settings dictionary to the specified value.

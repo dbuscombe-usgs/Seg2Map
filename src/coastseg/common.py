@@ -79,8 +79,6 @@ def update_downloaded_configs(roi_settings:dict=None,roi_ids:list=None,data_path
                     config_json[roi_id] = roi_settings[roi_id]
             # 5. save the updated config.json file to the ROI's downloaded location
             config_path = os.path.join(roi_data.get("filepath", ""), sitename)
-            print(config_path)
-            print(f"ROI ID {roi_id} : config_json {config_json} ")
             # return config_json
             file_utilities.config_to_file(config_json, config_path)
             logging.info(f"Updated config files for ROI {roi_id} at {config_json_path}")
@@ -133,14 +131,23 @@ def update_roi_settings(roi_settings, key, value):
 
     """
     for roi_id, settings in roi_settings.items():
-        settings[key] = value
+        if key in settings:
+            settings[key] = value
     return roi_settings
 
-def process_roi_settings(json_data, data_path):
+def process_roi_settings(json_data, data_path)->dict:
+    """
+    Process the ROI settings from the given JSON data and update the filepath to be the data_path.
+
+    Args:
+        json_data (dict): The JSON data containing ROI settings.
+        data_path (str): The path to the data directory.
+
+    Returns:
+        dict: A dictionary mapping ROI IDs to their extracted settings with updated filepath.
+    """
     roi_ids = json_data.get("roi_ids", [])
-    # creates a dictionary mapping ROI IDs to their extracted settings from json_data
     roi_settings = extract_roi_settings(json_data, roi_ids=roi_ids)
-    # update the filepath to be the data_path which is the /data directory on the current machine
     roi_settings = update_roi_settings(roi_settings, 'filepath', data_path)
     return roi_settings
 
@@ -156,6 +163,8 @@ def get_missing_roi_dirs(roi_settings: dict, roi_ids: list = None) -> dict:
         dict: A dictionary containing the missing ROI directories, where the key is the ROI ID and the value is the sitename.
     """
     missing_directories = {}
+    if roi_settings == {}:
+        return missing_directories
 
     # If roi_ids is not provided, check all ROIs in roi_settings
     if roi_ids is None:
