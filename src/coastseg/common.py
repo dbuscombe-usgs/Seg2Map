@@ -58,36 +58,6 @@ def update_config(config_json: dict, roi_settings: dict) -> dict:
             config_json[roi_id].update(settings)
     return config_json
 
-# def filter_existing_configs(roi_settings: Dict[str, dict], roi_ids: List[str]) -> List[str]:
-#     """
-#     Filter the list of ROI IDs based on the existence of corresponding configuration files.
-
-#     Args:
-#         roi_settings (dict): A dictionary containing ROI settings.
-#         roi_ids (list): A list of ROI IDs.
-
-#     Returns:
-#         list: A list of ROI IDs for which configuration files exist.
-#     """
-#     existing_config_roi_ids = []
-
-#     for roi_id in roi_ids:
-#         roi_data = roi_settings.get(roi_id)
-#         if not roi_data:
-#             logging.warning(f"No settings found for ROI {roi_id}. Skipping.")
-#             continue
-
-#         sitename = str(roi_data.get("sitename", ""))
-#         config_json_path = os.path.join(roi_data.get("filepath", ""), sitename, "config.json")
-
-#         if not os.path.exists(config_json_path):
-#             logging.warning(f"Config file not found for ROI {roi_id} at {config_json_path}. Skipping.")
-#             continue
-
-#         existing_config_roi_ids.append(roi_id)
-
-#     return existing_config_roi_ids
-
 
 def update_downloaded_configs(roi_settings: dict, roi_ids: list =None):
     """
@@ -128,44 +98,6 @@ def update_downloaded_configs(roi_settings: dict, roi_ids: list =None):
             logging.info(f"Successfully updated config for ROI {roi_id} at {config_path}")
         except IOError as e:
             logging.error(f"Failed to update config for ROI {roi_id}: {e}")
-
-
-
-# def update_downloaded_configs(roi_settings:dict=None,roi_ids:list=None,data_path:str=None):
-#     """
-#     Update the downloaded configuration files for the specified ROI(s).
-#     Args:
-#         roi_settings (dict, optional): Dictionary containing the ROI settings. Defaults to None.
-#             ROI settings should contain the ROI IDs as the keys and a dictionary of settings as the values.
-#             Each ROI ID should have the following keys: "dates", "sitename", "polygon", "roi_id", "sat_list", "landsat_collection", "filepath"
-#         roi_ids (list, optional): List of ROI IDs to update. Defaults to None.
-#         data_path (str, optional): Path to the data directory. Defaults to None.
-#     """
-#     if not data_path:
-#         raise ValueError("The data_path argument must be provided.")
-#     roi_ids = roi_ids or list(roi_settings.keys())
-#     # filter the list of ROI IDs based on the existence of corresponding configuration files
-#     roi_ids = filter_existing_configs(roi_settings, roi_ids)
-#     # update the config.json file for each ROI 
-#     for roi_id in roi_ids:
-#         # 1. update the config file located in the ROI's downloaded location and overwrite the existing file
-#         try:
-#             roi_settings[roi_id] = roi_settings.get(roi_id, {})
-#             config_json_path = os.path.join(roi_settings[roi_id].get("filepath", ""), roi_settings[roi_id].get("sitename", ""), "config.json")
-#             # 3.load the current contents of the config.json file
-#             config_json = file_utilities.read_json_file(config_json_path)
-#             # 4. Update the ROI data for each ROI in config.json
-#             for roi_id in roi_ids:
-#                 roi_settings[roi_id] = roi_settings.get(roi_id, {})
-#                 if config_json.get(roi_id,{}):
-#                     config_json[roi_id] = roi_settings[roi_id]
-#             # 5. save the updated config.json file to the ROI's downloaded location
-#             config_path = os.path.join(roi_settings[roi_id].get("filepath", ""), roi_settings[roi_id].get("sitename", ""))
-#             # return config_json
-#             file_utilities.config_to_file(config_json, config_path)
-#             logging.info(f"Updated config files for ROI {roi_id} at {config_json_path}")
-#         except IOError as e:
-#             logging.error(f"Failed to update config for ROI {roi_id}: {e}")
 
 def extract_roi_settings(json_data: dict,fields_of_interest: set = set(),roi_ids: list = None) -> dict:
     """
