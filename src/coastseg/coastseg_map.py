@@ -1006,7 +1006,7 @@ class CoastSeg_Map:
         logger.info(f"roi_settings: {roi_settings} loaded from {config_json_path}")
         
         # update the config.json files with the filepath of the data directory on this computer
-        common.update_downloaded_configs(roi_settings,data_path=data_path)
+        common.update_downloaded_configs(roi_settings)
         # return true if both config files exist
         return True
 
