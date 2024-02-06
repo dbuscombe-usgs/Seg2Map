@@ -1001,7 +1001,11 @@ class CoastSeg_Map:
         roi_settings = common.process_roi_settings(json_data, data_path)
         # Make sure each ROI has the specific settings for its save location, its ID, coordinates etc.
         if hasattr(self, "rois"):
-            self.rois.roi_settings = roi_settings  
+            self.rois.update_roi_settings(roi_settings)
+            # self.rois.roi_settings.update(roi_settings)
+        # if hasattr(self, "rois"):
+        #     self.rois.roi_settings = roi_settings 
+     
             
         logger.info(f"roi_settings: {roi_settings} loaded from {config_json_path}")
         
@@ -1034,7 +1038,7 @@ class CoastSeg_Map:
         logger.info(f"self.rois.roi_settings: {self.rois.roi_settings}")
 
         # if the rois do not have any settings then save the currently loaded settings to the ROIs
-        if not self.rois.roi_settings:
+        if not self.rois.get_roi_settings():
             filepath = filepath or os.path.abspath(os.getcwd())
             roi_settings = common.create_roi_settings(
                 settings, selected_layer.data, filepath
@@ -1084,7 +1088,7 @@ class CoastSeg_Map:
             save_config_files(config_json, config_gdf, filepath)
             print(f"Saved config files to {filepath}")
         else:
-            is_downloaded = common.were_rois_downloaded(self.rois.roi_settings, roi_ids)
+            is_downloaded = common.were_rois_downloaded(self.rois.get_roi_settings(), roi_ids)
             # if  data has been downloaded before then inputs have keys 'filepath' and 'sitename'
             if is_downloaded:
                 # write config_json file to each directory where a roi was saved
@@ -1445,7 +1449,7 @@ class CoastSeg_Map:
         """
         try:
             logger.info(f"Extracting shorelines from ROI with the id: {roi_id}")
-            roi_settings = self.rois.roi_settings[roi_id]
+            roi_settings = self.rois.get_roi_settings(roi_id)
             single_roi = common.extract_roi_by_id(rois_gdf, roi_id)
             # Clip shoreline to specific roi
             shoreline_in_roi = gpd.clip(shoreline_gdf, single_roi)
@@ -1547,19 +1551,8 @@ class CoastSeg_Map:
         roi_ids = self.get_roi_ids(is_selected=True)
         # check if any of the ROIs are missing their downloaded data directory
         missing_directories = common.get_missing_roi_dirs(self.rois.get_roi_settings(),roi_ids)
-        # # raise an warning if any of the selected ROIs were not downloaded 
+        # raise an warning if any of the selected ROIs were not downloaded 
         exception_handler.check_if_dirs_missing(missing_directories)
-        # # check if any of the ROIs are missing their downloaded data directory
-        # missing_directories = common.get_missing_roi_dirs(self.rois.roi_settings)
-        # # get only the rois with missing directories that are selected on the map
-        # roi_ids = list(self.selected_set)
-        # missing_rois = {}
-        # for roi_id in roi_ids:
-        #     if roi_id in missing_directories:
-        #         missing_rois[roi_id] = missing_directories[roi_id]
-            
-        # # get the roi settings and check if they all exist at the filepaths in the settings
-        # exception_handler.check_if_dirs_missing(missing_rois)
         
 
     def validate_download_imagery_inputs(self):
@@ -1628,10 +1621,26 @@ class CoastSeg_Map:
         """
         # 1. validate the inputs for shoreline extraction exist: ROIs, transects,shorelines and a downloaded data for each ROI
         self.validate_extract_shoreline_inputs()
+        # if self.session_exists(self.get_session_name()):
+        #     raise Exception("Session already exists. Please save the session with a different name.")
+        # if the session name of where the extracted shorelines already exists
+        # then don't allow the user to extract shorelines to this session 
         roi_ids = self.get_roi_ids(is_selected=True)
         logger.info(f"roi_ids to extract shorelines from: {roi_ids}")
         #2. update the settings with the most accurate epsg
         self.update_settings_with_accurate_epsg()
+    
+        # @todo make this change official after finding a way to test it properly    
+        # save the updated configs
+        # session_name = self.get_session_name()
+        # for roi_id in roi_ids:
+        #     # name of the directory where the extracted shorelines will be saved under the session name
+        #     ROI_directory = self.rois.roi_settings[roi_id]["sitename"]
+        #     session_path = file_utilities.create_session_path(
+        #                     session_name, ROI_directory
+        #                 )
+        #     self.save_config(session_path)
+        
         #3. get selected ROIs on map and extract shoreline for each of them
         for roi_id in tqdm(roi_ids, desc="Extracting Shorelines"):
             print(f"Extracting shorelines from ROI with the id:{roi_id}")
@@ -1774,6 +1783,28 @@ class CoastSeg_Map:
 
         self.save_session(roi_ids)
 
+    def session_exists(self, session_name: str) -> bool:
+            """
+            Check if a session with the given name exists.
+
+            Args:
+                session_name (str): The name of the session to check.
+
+            Returns:
+                bool: True if the session exists, False otherwise.
+            """
+            session_name = self.get_session_name()
+            session_path = os.path.join(os.getcwd(), "sessions", session_name)
+            if os.path.exists(session_path):
+                # check if session directory contains a directory with the roi_id
+                dirs=os.listdir(session_path)
+                if dirs:
+                    return True
+                else:
+                    return False
+            return False
+
+      
     def save_session(self, roi_ids: list[str], save_transects: bool = True):
         # Save extracted shoreline info to session directory
         session_name = self.get_session_name()

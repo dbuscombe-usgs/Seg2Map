@@ -514,7 +514,8 @@ class UI:
             session_path = os.path.join(os.getcwd(), "sessions")
             new_session_path = os.path.join(session_path, session_name)
             if os.path.exists(new_session_path):
-                print(f"Session {session_name} already exists and will be overwritten.")
+                print(f"Session {session_name} already exists. This session's data will be overwritten.")
+                # print(f"Session {session_name} already exists. Name a new session.") # @dev might need this if we decide not to allow users to save to an existing session
             elif not os.path.exists(new_session_path):
                 print(f"Session {session_name} was created.")
                 new_session_path = file_utilities.create_directory(

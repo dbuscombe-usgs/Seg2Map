@@ -206,13 +206,20 @@ class ROI:
         Returns:
             dict: The settings for the specified ROI, or all ROI settings if no ROI ID is provided.
         """
+        if not hasattr(self, "roi_settings"):
+            self.roi_settings = {}
+        if roi_id is None:
+            return {}
+        if not isinstance(roi_id, str):
+            raise TypeError("roi_id must be a string")
+        
         if roi_id in self.roi_settings:
             logger.info(f"self.roi_settings[roi_id]: {self.roi_settings[roi_id]}")
             return self.roi_settings[roi_id]
         else:
-            if hasattr(self, "roi_settings"):
-                logger.info(f"self.roi_settings: {self.roi_settings}")
-                return self.roi_settings
+            if roi_id == "":
+                    logger.info(f"self.roi_settings: {self.roi_settings}")
+                    return self.roi_settings
             else:
                 return {}
 
@@ -222,8 +229,29 @@ class ROI:
         Args:
             roi_settings (dict): A dictionary of settings for the ROI.
         """
+        if roi_settings is None:
+            raise ValueError("roi_settings cannot be None")
+        if not isinstance(roi_settings, dict):
+            raise TypeError("roi_settings must be a dictionary")
+
         logger.info(f"Saving roi_settings {roi_settings}")
         self.roi_settings = roi_settings
+
+    def update_roi_settings(self, new_settings: dict) -> None:
+        """Updates the ROI settings dictionary with the specified values.
+
+        Args:
+            new_settings (dict): A dictionary of new settings for the ROI.
+        """
+        if new_settings is None:
+            raise ValueError("new_settings cannot be None")
+
+        logger.info(f"Updating roi_settings with {new_settings}")
+        if self.roi_settings is None:
+            self.roi_settings = new_settings
+        else:
+            self.roi_settings.update(new_settings)
+        return self.roi_settings
 
     def get_extracted_shoreline(self, roi_id: str) -> Union[None, dict]:
         """Returns the extracted shoreline for the specified ROI ID.

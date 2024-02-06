@@ -1049,6 +1049,47 @@ def valid_ROI(transect_compatible_roi) -> gpd.GeoDataFrame:
 
 
 @pytest.fixture
+def valid_ROI_with_settings(valid_ROI):
+    
+    roi_settings = {"13": {
+        "polygon": [
+        [
+            [-117.4684719510983, 33.265263693689256],
+            [-117.46868751642162, 33.30560084719839],
+            [-117.42064919876344, 33.30577275029851],
+            [-117.42045572621824, 33.26543533468434],
+            [-117.4684719510983, 33.265263693689256]
+        ]
+        ],
+        "sitename": "ID_13_datetime06-05-23__04_16_45",
+        "landsat_collection": "C02",
+        "roi_id": "13",
+        "sat_list": ["L8", "L9"],
+        "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+        "dates": ["2018-12-01", "2023-03-01"]
+    },
+    "12": {
+        "polygon": [
+        [
+            [-117.4682568148693, 33.224926276845096],
+            [-117.4684719510983, 33.265263693689256],
+            [-117.42045572621824, 33.26543533468434],
+            [-117.42026263879279, 33.22509765597134],
+            [-117.4682568148693, 33.224926276845096]
+        ]
+        ],
+        "sitename": "ID_12_datetime06-05-23__04_16_45",
+        "landsat_collection": "C02",
+        "roi_id": "12",
+        "sat_list": ["L8", "L9"],
+        "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+        "dates": ["2018-12-01", "2023-03-01"]
+    },
+    }
+    valid_ROI.roi_settings = roi_settings
+    return valid_ROI
+
+@pytest.fixture
 def valid_single_roi_settings() -> dict:
     """Returns valid inputs dict with two roi id '2' and '5'
 

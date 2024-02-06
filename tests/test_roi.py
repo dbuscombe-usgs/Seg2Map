@@ -361,3 +361,183 @@ def test_set_roi_settings(valid_ROI: roi.ROI):
 def test_style_layer(valid_ROI: roi.ROI):
     with pytest.raises(AssertionError):
         valid_ROI.style_layer({}, layer_name="Nope")
+# Test get_roi_settings method
+
+def test_get_roi_settings_with_valid_roi_id(valid_ROI):
+    # Test with valid ROI ID
+    roi_id = "roi1"
+    expected_settings = {"param1": 10, "param2": "abc"}
+    valid_ROI.roi_settings = {roi_id: expected_settings}
+    
+    actual_settings = valid_ROI.get_roi_settings(roi_id)
+    
+    assert actual_settings == expected_settings
+
+def test_get_roi_settings_with_invalid_roi_id(valid_ROI):
+    # Test with invalid ROI ID
+    roi_id = "roi2"
+    valid_ROI.roi_settings = {"roi1": {"param1": 10, "param2": "abc"}}
+    
+    actual_settings = valid_ROI.get_roi_settings(roi_id)
+    
+    assert actual_settings == {}
+
+def test_get_roi_settings_with_no_roi_id(valid_ROI):
+    # Test with no ROI ID
+    valid_ROI.roi_settings = {"roi1": {"param1": 10, "param2": "abc"}}
+    
+    actual_settings = valid_ROI.get_roi_settings()
+    
+    assert actual_settings == valid_ROI.roi_settings
+
+def test_get_roi_settings_with_none_roi_id(valid_ROI):
+    # Test with None ROI ID
+    valid_ROI.roi_settings = {"roi1": {"param1": 10, "param2": "abc"}}
+    
+    with pytest.raises(ValueError):
+        valid_ROI.get_roi_settings(None)
+
+def test_get_roi_settings_with_non_string_roi_id(valid_ROI):
+    # Test with non-string ROI ID
+    roi_id = 123
+    valid_ROI.roi_settings = {"roi1": {"param1": 10, "param2": "abc"}}
+    
+    with pytest.raises(TypeError):
+        valid_ROI.get_roi_settings(roi_id)
+        
+
+def test_get_roi_settings_with_existing_roi_id(valid_ROI):
+    roi_id = "roi1"
+    valid_ROI.roi_settings = {roi_id: {"param1": 10, "param2": "abc"}}
+    assert valid_ROI.get_roi_settings(roi_id) == {"param1": 10, "param2": "abc"}
+
+def test_get_roi_settings_with_non_existing_roi_id(valid_ROI):
+    roi_id = "roi1"
+    valid_ROI.roi_settings = {"roi2": {"param1": 10, "param2": "abc"}}
+    assert valid_ROI.get_roi_settings(roi_id) == {}
+
+def test_get_roi_settings_with_empty_roi_id(valid_ROI):
+    valid_ROI.roi_settings = {"roi1": {"param1": 10, "param2": "abc"}}
+    assert valid_ROI.get_roi_settings("") == {"roi1": {"param1": 10, "param2": "abc"}}
+
+def test_get_roi_settings_with_none_roi_id(valid_ROI):
+
+    assert valid_ROI.get_roi_settings(None) == {}
+
+def test_get_roi_settings_with_non_string_roi_id(valid_ROI):
+    with pytest.raises(TypeError):
+        valid_ROI.get_roi_settings(123)
+        
+        
+def test_update_roi_settings_with_valid_settings(valid_ROI):
+    new_settings = {
+        "param1": 10,
+        "param2": "value",
+        "param3": [1, 2, 3]
+    }
+    valid_ROI.update_roi_settings(new_settings)
+    assert valid_ROI.roi_settings == new_settings
+
+def test_update_roi_settings_with_empty_settings(valid_ROI_with_settings):
+    new_settings = {}
+    valid_ROI_with_settings.update_roi_settings(new_settings)
+    expected_settings = {"13": {
+            "polygon": [
+            [
+                [-117.4684719510983, 33.265263693689256],
+                [-117.46868751642162, 33.30560084719839],
+                [-117.42064919876344, 33.30577275029851],
+                [-117.42045572621824, 33.26543533468434],
+                [-117.4684719510983, 33.265263693689256]
+            ]
+            ],
+            "sitename": "ID_13_datetime06-05-23__04_16_45",
+            "landsat_collection": "C02",
+            "roi_id": "13",
+            "sat_list": ["L8", "L9"],
+            "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "dates": ["2018-12-01", "2023-03-01"]
+        },
+        "12": {
+            "polygon": [
+            [
+                [-117.4682568148693, 33.224926276845096],
+                [-117.4684719510983, 33.265263693689256],
+                [-117.42045572621824, 33.26543533468434],
+                [-117.42026263879279, 33.22509765597134],
+                [-117.4682568148693, 33.224926276845096]
+            ]
+            ],
+            "sitename": "ID_12_datetime06-05-23__04_16_45",
+            "landsat_collection": "C02",
+            "roi_id": "12",
+            "sat_list": ["L8", "L9"],
+            "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "dates": ["2018-12-01", "2023-03-01"]
+        }
+    }
+    assert valid_ROI_with_settings.roi_settings.keys() == expected_settings.keys()
+    assert valid_ROI_with_settings.roi_settings == expected_settings
+    
+
+def test_update_roi_settings_with_existing_settings(valid_ROI_with_settings):
+    new_settings = {
+        "13": {
+        "polygon": [
+        [
+            [-117.4684719510983, 33.265263693689256],
+            [-118.46868751642162, 33.30560084719839],
+            [-117.42064919876344, 33.30577275029851],
+            [-117.42045572621824, 33.26543533468434],
+            [-117.4684719510983, 33.265263693689256]
+        ]
+        ],
+        "sitename": "ID_13_datetime06-05-23__04_16_45",
+        "landsat_collection": "C02",
+        "roi_id": "13",
+        "sat_list": ["L7", "L9"],
+        "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+        "dates": ["2017-12-01", "2023-03-01"]
+    },
+    }
+    expected_settings = {        "13": {
+        "polygon": [
+        [
+            [-117.4684719510983, 33.265263693689256],
+            [-118.46868751642162, 33.30560084719839],
+            [-117.42064919876344, 33.30577275029851],
+            [-117.42045572621824, 33.26543533468434],
+            [-117.4684719510983, 33.265263693689256]
+        ]
+        ],
+        "sitename": "ID_13_datetime06-05-23__04_16_45",
+        "landsat_collection": "C02",
+        "roi_id": "13",
+        "sat_list": ["L7", "L9"],
+        "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+        "dates": ["2017-12-01", "2023-03-01"]
+        },
+        "12": {
+            "polygon": [
+            [
+                [-117.4682568148693, 33.224926276845096],
+                [-117.4684719510983, 33.265263693689256],
+                [-117.42045572621824, 33.26543533468434],
+                [-117.42026263879279, 33.22509765597134],
+                [-117.4682568148693, 33.224926276845096]
+            ]
+            ],
+            "sitename": "ID_12_datetime06-05-23__04_16_45",
+            "landsat_collection": "C02",
+            "roi_id": "12",
+            "sat_list": ["L8", "L9"],
+            "filepath": r"C:\\development\\doodleverse\\coastseg\\CoastSeg\\data",
+            "dates": ["2018-12-01", "2023-03-01"]
+        },
+    }
+    valid_ROI_with_settings.update_roi_settings(new_settings)
+    assert valid_ROI_with_settings.roi_settings == expected_settings
+
+def test_update_roi_settings_with_none_settings(valid_ROI):
+    with pytest.raises(ValueError):
+        valid_ROI.update_roi_settings(None)
