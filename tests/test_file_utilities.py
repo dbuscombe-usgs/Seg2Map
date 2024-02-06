@@ -2,7 +2,88 @@ import os
 import json
 import pytest
 from coastseg.file_utilities import read_json_file
+from coastseg.file_utilities import to_file
 from coastseg import file_utilities
+import datetime
+import numpy as np
+from shapely.geometry import Point
+import geopandas as gpd
+
+
+def test_config_to_file_geodataframe_folder(tmp_path):
+    gdf = gpd.GeoDataFrame({'geometry': [Point(1, 2)], 'value': ['test']})
+    test_file = tmp_path / "config_gdf.geojson"
+    file_utilities.config_to_file(gdf, str(tmp_path))
+
+    loaded_gdf = gpd.read_file(test_file)
+    assert isinstance(loaded_gdf, gpd.GeoDataFrame)
+    assert loaded_gdf['value'][0] == 'test'
+
+def test_config_to_file_geodataframe(tmp_path):
+    gdf = gpd.GeoDataFrame({'geometry': [Point(1, 2)], 'value': ['test']})
+    test_file = tmp_path / "config_gdf.geojson"
+    file_utilities.config_to_file(gdf, str(test_file))
+
+    loaded_gdf = gpd.read_file(test_file)
+    assert isinstance(loaded_gdf, gpd.GeoDataFrame)
+    assert loaded_gdf['value'][0] == 'test'
+
+def test_config_to_file_json_folder(tmp_path):
+    test_data = {"key": "value"}
+    test_file = tmp_path / "config.json"
+    file_utilities.config_to_file(test_data, str(tmp_path))
+
+    with open(test_file, "r") as file:
+        data = json.load(file)
+        assert data == test_data    
+    
+def test_config_to_file_json(tmp_path):
+    test_data = {"key": "value"}
+    test_file = tmp_path / "config.json"
+    file_utilities.config_to_file(test_data, str(test_file))
+
+    with open(test_file, "r") as file:
+        data = json.load(file)
+        assert data == test_data
+
+def test_write_to_json(tmp_path):
+    test_data = {"key": "value"}
+    test_file = tmp_path / "test.json"
+    file_utilities.write_to_json(str(test_file), test_data)
+
+    with open(test_file, "r") as file:
+        data = json.load(file)
+        assert data == test_data
+
+def test_serialize_basic_dict(tmp_path):
+    data = {"key1": "value1", "key2": 123}
+    file_path = tmp_path / "test_basic.json"
+    to_file(data, str(file_path))
+
+    with open(file_path, "r") as file:
+        loaded_data = json.load(file)
+        assert loaded_data == data
+
+def test_serialize_datetime(tmp_path):
+    date_obj = datetime.date.today()
+    datetime_obj = datetime.datetime.now()
+    data = {"date": date_obj, "datetime": datetime_obj}
+    file_path = tmp_path / "test_datetime.json"
+    to_file(data, str(file_path))
+
+    with open(file_path, "r") as file:
+        loaded_data = json.load(file)
+        assert loaded_data == {"date": date_obj.isoformat(), "datetime": datetime_obj.isoformat()}
+
+def test_serialize_numpy_array(tmp_path):
+    np_array = np.array([1, 2, 3])
+    data = {"array": np_array}
+    file_path = tmp_path / "test_numpy.json"
+    to_file(data, str(file_path))
+
+    with open(file_path, "r") as file:
+        loaded_data = json.load(file)
+        assert loaded_data == {"array": np_array.tolist()}
 
 
 def test_move_from_dir_to_dir(temp_src_dir, temp_dst_dir):

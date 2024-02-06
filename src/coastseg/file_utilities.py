@@ -328,9 +328,20 @@ def config_to_file(config: Union[dict, gpd.GeoDataFrame], filepath: str):
 
     Args:
         config (Union[dict, gpd.GeoDataFrame]): data to save to config file
-        filepath (str): full path to directory to save config file
+        filepath (str): full path to directory to save config file. NOT INCLUDING THE FILE
     """
-    if isinstance(config, dict):
+    # default save path
+    filepath = str(filepath)
+    save_path = filepath
+    # check if config.json or config_gdf.geojson in the filepath
+    if filepath.endswith("config.json"):
+        filename = f"config.json"
+        write_to_json(filepath, config)
+    elif filepath.endswith("config_gdf.geojson"):
+        filename = f"config.json"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        config.to_file(filepath, driver="GeoJSON")
+    elif isinstance(config, dict):
         filename = f"config.json"
         save_path = os.path.abspath(os.path.join(filepath, filename))
         write_to_json(save_path, config)
@@ -339,6 +350,7 @@ def config_to_file(config: Union[dict, gpd.GeoDataFrame], filepath: str):
         save_path = os.path.abspath(os.path.join(filepath, filename))
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         config.to_file(save_path, driver="GeoJSON")
+        
     logger.info(f"Saved {filename} saved to {save_path}")
 
 
