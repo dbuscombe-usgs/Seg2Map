@@ -569,7 +569,6 @@ class CoastSeg_Map:
 
         The function looks for the following files in the directory:
         - config_gdf.geojson: contains the configuration settings for the project
-        - transects_settings.json: contains the settings for the transects module
         - shoreline_settings.json: contains the settings for the shoreline module
 
         If the config_gdf.geojson file is not found, a message is printed to the console.
@@ -593,7 +592,7 @@ class CoastSeg_Map:
                 self.load_metadata(ids=list(self.rois.roi_settings.keys()))
             else:
                 logger.warning(f"No ROIs were able to have their metadata loaded.")
-            # load in setting from shoreline_settings.json and transects_settings.json
+            # load in setting from shoreline_settings.json
             for file_name in os.listdir(dir_path):
                 file_path = os.path.join(dir_path, file_name)
                 if not os.path.isfile(file_path):
@@ -610,18 +609,6 @@ class CoastSeg_Map:
                         "max_dist_ref",
                         "dist_clouds",
                         "percent_no_data",
-                    ]
-                    settings = common.load_settings(file_path, keys)
-                    self.set_settings(**settings)
-                elif file_name == "transects_settings.json":
-                    keys = [
-                        "max_std",
-                        "min_points",
-                        "along_dist",
-                        "max_range",
-                        "min_chainage",
-                        "multiple_inter",
-                        "prc_multiple",
                     ]
                     settings = common.load_settings(file_path, keys)
                     self.set_settings(**settings)

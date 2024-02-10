@@ -1397,10 +1397,7 @@ def save_transects(
         filename="transect_time_series.csv",
     )
     save_path = os.path.join(save_location, "transects_cross_distances.json")
-    # save transect settings to file
-    transect_settings = get_transect_settings(settings)
-    transect_settings_path = os.path.join(save_location, "transects_settings.json")
-    file_utilities.to_file(transect_settings, transect_settings_path)
+
     file_utilities.to_file(cross_distance_transects, save_path)
 
 
