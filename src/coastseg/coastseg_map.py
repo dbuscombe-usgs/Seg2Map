@@ -568,9 +568,8 @@ class CoastSeg_Map:
         Load the configuration files from the given directory.
 
         The function looks for the following files in the directory:
-        - config_gdf.geojson: contains the configuration settings for the project
-        - shoreline_settings.json: contains the settings for the shoreline module
-
+        - config_gdf.geojson: contain the geometries of objects saved to the session
+        - config.json: contains the configuration settings for the session
         If the config_gdf.geojson file is not found, a message is printed to the console.
 
         Args:
@@ -592,26 +591,6 @@ class CoastSeg_Map:
                 self.load_metadata(ids=list(self.rois.roi_settings.keys()))
             else:
                 logger.warning(f"No ROIs were able to have their metadata loaded.")
-            # load in setting from shoreline_settings.json
-            for file_name in os.listdir(dir_path):
-                file_path = os.path.join(dir_path, file_name)
-                if not os.path.isfile(file_path):
-                    continue
-                if file_name == "shoreline_settings.json":
-                    keys = [
-                        "cloud_thresh",
-                        "cloud_mask_issue",
-                        "min_beach_area",
-                        "min_length_sl",
-                        "output_epsg",
-                        "sand_color",
-                        "pan_off",
-                        "max_dist_ref",
-                        "dist_clouds",
-                        "percent_no_data",
-                    ]
-                    settings = common.load_settings(file_path, keys)
-                    self.set_settings(**settings)
             if not config_loaded:
                 logger.info(f"Not all config files not found at {dir_path}")
 

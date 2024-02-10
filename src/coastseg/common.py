@@ -2378,7 +2378,6 @@ def save_extracted_shorelines(
 
     The function saves the following files in the specified save_path:
     - extracted_shorelines.geojson: contains the extracted shorelines as a GeoJSON object.
-    - shoreline_settings.json: contains the shoreline settings as JSON data.
     - extracted_shorelines_dict.json: contains the extracted shorelines dictionary as JSON data.
 
     :param extracted_shorelines: An Extracted_Shoreline object containing the extracted shorelines, shoreline settings, and dictionary.
@@ -2402,14 +2401,6 @@ def save_extracted_shorelines(
     extracted_shorelines.to_file(
         save_path, "extracted_shorelines_points.geojson", projected_gdf
     )
-
-    # Save shoreline settings as a JSON file
-    extracted_shorelines.to_file(
-        save_path,
-        "shoreline_settings.json",
-        extracted_shorelines.shoreline_settings,
-    )
-
     # Save extracted shorelines dictionary as a JSON file
     extracted_shorelines.to_file(
         save_path,
