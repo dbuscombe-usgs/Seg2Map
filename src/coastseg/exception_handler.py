@@ -31,7 +31,7 @@ EMPTY_SELECTED_ROIS = (
     "Must select at least one ROI on the map to perform this operation"
 )
 SETTINGS_NOT_FOUND = "No settings found. Click save settings."
-ROI_NOT_FOUND = "No ROIs found. Click Generate ROIs."
+ROI_IS_NONE= "NO ROI found. Try generating a new ROI or loading an ROI from a file."
 SHORELINE_NOT_FOUND = "No shoreline found. Please load a shoreline on the map first."
 TRANSECTS_NOT_FOUND = "No transects found. Please load a transects on the map first."
 NO_ROI_SETTINGS = ("None of the ROIs have been downloaded on this machine or the location where they were downloaded has been moved. Please download the ROIs again.")
@@ -246,7 +246,7 @@ def check_if_None(feature, feature_type: str = "", message: str = ""):
         if feature_type == "shoreline":
             message = SHORELINE_NOT_FOUND
         if "roi" in feature_type.lower():
-            message = ROI_NOT_FOUND
+            message = ROI_IS_NONE
         logger.error(f"{feature_type} is None")
         raise exceptions.Object_Not_Found(feature_type, message)
 
@@ -266,7 +266,7 @@ def validate_feature(feature, feature_type: str = "", message: str = ""):
         if "shoreline" in feature_type.lower():
             message = SHORELINE_NOT_FOUND
         if "roi" in feature_type.lower():
-            message = ROI_NOT_FOUND
+            message = ROI_IS_NONE
         if "transect" in feature_type.lower():
             message = TRANSECTS_NOT_FOUND
         if "bbox" in feature_type.lower():

@@ -128,7 +128,6 @@ class ROI(Feature):
             None.
         """
         # make sure to perform a CRS check here too
-
         rois_gdf = common.preprocess_geodataframe(
             rois_gdf,
             columns_to_keep=["id", "geometry"],
@@ -284,7 +283,18 @@ class ROI(Feature):
         return list(self.get_all_extracted_shorelines().keys())
 
     def add_geodataframe(self, gdf: gpd.GeoDataFrame) -> "ROI":
-        """Adds the geodataframe to the map"""
+        """
+            Adds a GeoDataFrame to the existing ROI object.
+
+            Args:
+                gdf (gpd.GeoDataFrame): The GeoDataFrame to be added.
+
+            Returns:
+                ROI: The updated ROI object.
+
+            Raises:
+                None
+        """
         # check if geodataframe column has 'id' column and add one if one doesn't exist
         if "id" not in gdf.columns:
             gdf["id"] = gdf.index.astype(str).tolist()

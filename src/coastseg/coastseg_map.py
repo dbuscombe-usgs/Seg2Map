@@ -6,7 +6,7 @@ import logging
 import glob
 from datetime import datetime
 from collections import defaultdict
-from typing import Collection, Dict, List, Optional, Tuple, Union
+from typing import Any, Collection, Dict, List, Optional, Tuple, Union
 import traceback
 
 # Third-party imports
@@ -797,27 +797,30 @@ class CoastSeg_Map:
             "shoreline_extraction_area": ["geometry"],
         }
 
+        # attempt to load each feature type onto the map from the config_gdf.geojson file
         for feature_name, columns in feature_types.items():
             feature_gdf = self._extract_feature_gdf(gdf, feature_name, columns)
-            if feature_name == "roi":
-                exception_handler.check_if_gdf_empty(
-                    feature_gdf, "ROIs", "Cannot load empty ROIs onto map"
-                )
-                if self.rois is None:
-                    self.rois = ROI(rois_gdf=feature_gdf)
-                    self.load_feature_on_map(
-                        feature_name, gdf=feature_gdf, zoom_to_bounds=True
-                    )
-                elif self.rois is not None:
-                    # add the new roi to the existing rois
-                    self.rois = self.rois.add_geodataframe(feature_gdf)
-                    # load the new rois onto the map
-                    self.add_feature_on_map(self.rois, feature_name)
-            else:
-                # load shorelines, transects, or bbox features onto the map
+            
+            # if the feature is not an ROI use the load_feature_on_map method to load it. (eg. shorelines, transects, bbox)
+            if feature_name != "roi":
+                self.load_feature_on_map(feature_name, gdf=feature_gdf, zoom_to_bounds=True)
+                continue
+            
+            # at this point assume the feature is an ROI
+            exception_handler.check_if_gdf_empty(feature_gdf, "ROIs", "Cannot load empty ROIs onto map")
+
+            if self.rois is None:
+                # if no ROIs exist on the map, create a new ROI object and load the ROIs onto the map
+                self.rois = ROI(rois_gdf=feature_gdf)
                 self.load_feature_on_map(
-                    feature_name, gdf=feature_gdf, zoom_to_bounds=True
+                        feature_name, gdf=feature_gdf, zoom_to_bounds=True
                 )
+            else:
+                # add the new roi to the existing rois
+                self.rois = self.rois.add_geodataframe(feature_gdf)
+                # load the new rois onto the map
+                self.add_feature_on_map(self.rois, feature_name)  
+            
         del gdf
 
     def _extract_feature_gdf(
@@ -1080,7 +1083,7 @@ class CoastSeg_Map:
 
         """
         logger.info(f"Loading json config from filepath: {filepath}")
-        exception_handler.check_if_None(self.rois)
+        exception_handler.check_if_None(self.rois,"rois")
 
         json_data = file_utilities.read_json_file(filepath, raise_error=True)
         json_data = json_data or {}
@@ -1639,8 +1642,23 @@ class CoastSeg_Map:
         return self.get_settings()
         
 
-    def validate_transect_inputs(self, settings:dict, roi_ids:list=None):
-        # ROIs,settings, roi-settings cannot be None or empty
+    def validate_transect_inputs(self, settings: dict, roi_ids: list = None):
+        """
+        Validates the inputs for generating transects.
+
+        Args:
+            settings (dict): A dictionary containing the settings for generating transects.
+            roi_ids (list, optional): A list of ROI IDs. Defaults to None.
+
+        Raises:
+            ValueError: If any of the following conditions are met:
+                - The session name is an empty string.
+                - The ROIs, transects, or extracted shorelines are None.
+                - The extracted shorelines dictionary is empty.
+                - The 'along_dist' key is missing from the settings dictionary.
+                - The roi_ids list is empty.
+        """
+        # ROIs, settings, roi-settings cannot be None or empty
         exception_handler.check_if_empty_string(self.get_session_name(), "session name")
         # ROIs, transects, and extracted shorelines must exist
         exception_handler.check_if_None(self.rois, "ROIs")
@@ -1657,6 +1675,23 @@ class CoastSeg_Map:
 
 
     def validate_extract_shoreline_inputs(self,roi_ids:list=None,settings:dict=None):
+        """
+        Validates the inputs required for extracting shorelines.
+        
+        Ensures that the required settings are present and that the selected layer contains the selected ROI.
+        It also validates that the ROIs have been downloaded before by checking for the presence roi_settings and ensures
+        that the directories for the ROIs exist.
+
+        Args:
+            roi_ids (list, optional): List of ROI IDs. Defaults to None.
+            settings (dict, optional): Dictionary of settings. Defaults to None.
+
+        Raises:
+            Exception: If any of the required inputs are missing or invalid.
+
+        Returns:
+            None
+        """
         # ROIs,settings, roi-settings cannot be None or empty
         if not settings:
             settings = self.get_settings()
@@ -1669,7 +1704,6 @@ class CoastSeg_Map:
         exception_handler.validate_feature(self.rois, "roi")
         exception_handler.validate_feature(self.shoreline, "shoreline")
         exception_handler.validate_feature(self.transects, "transects")
-        # exception_handler.validate_feature(self.bbox, "bounding box")
         # ROI settings must not be empty
         if hasattr(self.rois, "roi_settings"):
             exception_handler.check_empty_dict(self.rois.roi_settings, "roi_settings")
@@ -2494,19 +2528,8 @@ class CoastSeg_Map:
             gdf (gpd.GeoDataFrame, optional): GeoDataFrame containing feature geometry. Defaults to None.
         """
         new_feature = None
-        
-        # Load GeoDataFrame if file is provided
-        if file:
-            new_feature = self.load_feature_from_file(feature_name,file,**kwargs)
-        elif isinstance(gdf, gpd.GeoDataFrame):
-            if gdf.empty:
-                logger.info(f"No {feature_name} was empty")
-                return
-            else:
-                new_feature = self.load_feature_from_gdf(feature_name, gdf, **kwargs)
-        else:
-            # if gdf is None then create the feature from scratch and load a default
-            new_feature = self.factory.make_feature(self, feature_name, gdf, **kwargs)
+        # create the feature based on the feature name either from file, gdf or load a default feature(if available)
+        new_feature = self._get_feature(feature_name, file, gdf, **kwargs)
             
         if new_feature is not None:
             # load the features onto the map
@@ -2515,7 +2538,38 @@ class CoastSeg_Map:
                 feature_name,
                 **kwargs,
             )
-        
+            
+    def _get_feature(self, feature_name: str, file: str="", gdf: gpd.GeoDataFrame= None, **kwargs) -> Any:
+        """
+        Retrieves a feature based on the given feature name, file path, or GeoDataFrame.
+
+        Args:
+            feature_name (str): The name of the feature to retrieve.
+            file (str, optional): The file path to load the feature from. Defaults to an empty string.
+            gdf (gpd.GeoDataFrame, optional): The GeoDataFrame to load the feature from. Defaults to None.
+            **kwargs: Additional keyword arguments to be passed to the feature loading methods.
+
+        Returns:
+            Any: The loaded feature. Either an ROI, bbox, shoreline,shoreline extraction area or transects object.
+            If not feature can be created returns None.
+
+        Raises:
+            None
+
+        """
+        if file:
+            return self.load_feature_from_file(feature_name,file,**kwargs)
+        elif isinstance(gdf, gpd.GeoDataFrame):
+            if gdf.empty:
+                logger.info(f"No {feature_name} was empty")
+                return
+            else:
+                return self.load_feature_from_gdf(feature_name, gdf, **kwargs)
+        else:
+            # if gdf is None then create the feature from scratch by loading a default
+            return self.factory.make_feature(self, feature_name, gdf, **kwargs)
+
+            
     def make_feature(self, feature_name: str, gdf: gpd.GeoDataFrame=None, **kwargs) -> Feature:
         """Creates a new feature of type feature_name from a given GeoDataFrame.
         If no gdf is provided then a default feature is created if the feature_name is "rois" "shoreline" or "transects"
@@ -2606,9 +2660,11 @@ class CoastSeg_Map:
         if new_feature is None:
             logger.warning(f"No {feature_name} was None")
             return
+        print(f"Adding {feature_name} to map")
         # get on hover and on click handlers for feature
         on_hover = self.get_on_hover_handler(feature_name)
         on_click = self.get_on_click_handler(feature_name)
+        print(f"on_click handler: {on_click}")
         # if layer name is not given use the layer name of the feature
         if not layer_name and hasattr(new_feature, "LAYER_NAME"):
             layer_name = new_feature.LAYER_NAME

@@ -1021,18 +1021,38 @@ class Zoo_Model:
         logger.info(f"self.metadatadict: {self.metadata_dict}")
 
     def get_metadatadict(
-        self, weights_list: list, config_files: list, model_types: list
-    ) -> dict:
-        metadatadict = {}
-        metadatadict["model_weights"] = weights_list
-        metadatadict["config_files"] = config_files
-        metadatadict["model_types"] = model_types
-        return metadatadict
+            self, weights_list: list, config_files: list, model_types: list
+        ) -> dict:
+            """
+            Returns a dictionary containing metadata information.
+
+            Args:
+                weights_list (list): A list of model weights.
+                config_files (list): A list of configuration files.
+                model_types (list): A list of model types.
+
+            Returns:
+                dict: A dictionary containing the metadata information.
+            """
+            metadatadict = {}
+            metadatadict["model_weights"] = weights_list
+            metadatadict["config_files"] = config_files
+            metadatadict["model_types"] = model_types
+            return metadatadict
 
     def get_classes(self, model_directory_path: str):
-        class_path = os.path.join(model_directory_path, "classes.txt")
-        classes = common.read_text_file(class_path)
-        return classes
+            """
+            Retrieves the classes from the specified model directory.
+
+            Args:
+                model_directory_path (str): The path to the model directory.
+
+            Returns:
+                list: A list of classes.
+            """
+            class_path = os.path.join(model_directory_path, "classes.txt")
+            classes = common.read_text_file(class_path)
+            return classes
 
     def run_model(
             self,
