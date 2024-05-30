@@ -143,6 +143,9 @@ class ROI(Feature):
         drop_ids = common.get_ids_with_invalid_area(
             rois_gdf, max_area=ROI.MAX_SIZE, min_area=ROI.MIN_SIZE
         )
+        # convert the ids to strings
+        rois_gdf["id"] = rois_gdf["id"].astype(str)
+        
         if drop_ids:
             logger.info(f"Dropping ROIs that are an invalid size {drop_ids}")
             rois_gdf.drop(index=drop_ids, axis=0, inplace=True)
