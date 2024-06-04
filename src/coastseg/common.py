@@ -31,6 +31,7 @@ from tqdm.auto import tqdm
 from coastseg import exceptions, file_utilities
 from coastseg.exceptions import InvalidGeometryType
 from coastseg.validation import find_satellite_in_filename
+from coastseg import core_utilities
 
 # widget icons from https://fontawesome.com/icons/angle-down?s=solid&f=classic
 
@@ -2142,6 +2143,18 @@ def get_most_accurate_epsg(epsg_code: int, polygon: gpd.GeoDataFrame):
     return epsg_code
 
 def create_dir_chooser(callback, title: str = None, starting_directory: str = "data"):
+    """
+    Creates a directory chooser widget.
+
+    Args:
+        callback: The function to be called when a directory is selected.
+        title (str, optional): The title of the directory chooser. Defaults to None.
+        starting_directory (str, optional): The initial directory to be displayed. Defaults to "data".
+
+    Returns:
+        HBox: The directory chooser widget.
+
+    """
     padding = "0px 0px 0px 5px"  # upper, right, bottom, left
     inital_path = os.path.join(os.getcwd(), starting_directory)
     if not os.path.exists(inital_path):
@@ -3098,11 +3111,12 @@ def get_jpgs_from_data() -> str:
     """Returns the folder where all jpgs were copied from the data folder in coastseg.
     This is where the model will save the computed segmentations."""
     # Data folder location
-    src_path = os.path.abspath(os.getcwd() + os.sep + "data")
+    base_path = os.path.abspath(core_utilities.get_base_dir())
+    src_path = os.path.join(base_path,  "data")
     if os.path.exists(src_path):
         rename_jpgs(src_path)
         # Create a new folder to hold all the data
-        location = os.getcwd()
+        location = base_path
         name = "segmentation_data"
         # new folder "segmentation_data_datetime"
         new_folder = file_utilities.mk_new_dir(name, location)
@@ -3422,12 +3436,13 @@ def get_base_dir(repo_name="CoastSeg") -> pathlib.Path:
     def resolve_repo_path(cwd: pathlib.Path, proj_name: str) -> pathlib.Path:
         root = cwd.root
         proj_dir = cwd
+        # keep moving up the directory tree until the project directory is found or the root is reached
         while proj_dir.name != proj_name:
             proj_dir = proj_dir.parent
             if str(proj_dir) == root:
                 msg = "Reached root depth - cannot resolve project path."
                 raise ValueError(msg)
-
+        # return the project directory path for example CoastSeg directory
         return proj_dir
 
     cwd = pathlib.Path().resolve() if is_interactive() else pathlib.Path(__file__)
@@ -3435,10 +3450,4 @@ def get_base_dir(repo_name="CoastSeg") -> pathlib.Path:
     proj_dir = resolve_repo_path(cwd, proj_name=repo_name)
     return proj_dir
 
-
-if __name__ == "__main__":
-
-    base_dir = get_base_dir()
-    data_dir = base_dir / "data"
-    print(data_dir)
     

@@ -16,6 +16,7 @@ from coastseg import sessions
 from coastseg import extracted_shoreline
 from coastseg import geodata_processing
 from coastseg import file_utilities
+from coastseg import core_utilities
 
 import geopandas as gpd
 from osgeo import gdal
@@ -745,7 +746,7 @@ class Zoo_Model:
         prog_bar.set_description_str(
                                 desc=f"Ran model now extracting shorelines", refresh=True
         )
-        sessions_path = os.path.join(os.getcwd(), "sessions")
+        sessions_path = os.path.join(core_utilities.get_base_dir(), "sessions")
         session_directory = file_utilities.create_directory(sessions_path, session_name)
         # extract shorelines using the segmented imagery
         self.extract_shorelines_with_unet(
@@ -796,7 +797,10 @@ class Zoo_Model:
         settings = self.get_settings()
 
         # create session path to store extracted shorelines and transects
-        new_session_path = Path(os.getcwd()) / "sessions" / session_name
+        base_path = core_utilities.get_base_dir()
+        new_session_path = base_path / 'sessions' / session_name
+
+        
         new_session_path.mkdir(parents=True, exist_ok=True)
 
         # load the ROI settings from the config file
@@ -1076,7 +1080,7 @@ class Zoo_Model:
 
             # create a session
             session = sessions.Session()
-            sessions_path = file_utilities.create_directory(os.getcwd(), "sessions")
+            sessions_path = file_utilities.create_directory(core_utilities.get_base_dir(), "sessions")
             session_path = file_utilities.create_directory(sessions_path, session_name)
 
             session.path = session_path

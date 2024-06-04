@@ -68,7 +68,7 @@ def get_collection_by_tier(
             "L7": "LANDSAT/LE07/C02/T1_TOA",
             "L8": "LANDSAT/LC08/C02/T1_TOA",
             "L9": "LANDSAT/LC09/C02/T1_TOA",
-            "S2": "COPERNICUS/S2",
+            "S2": "COPERNICUS/S2_HARMONIZED",
         },
         2: {
             "L5": "LANDSAT/LT05/C02/T2_TOA",
@@ -98,10 +98,10 @@ def get_collection_by_tier(
 
     # Create a filter to select images with system:time_start month in the monthsToKeep list
     def filter_by_month(month):
-        return ee.Filter.calendarRange(month, month, 'month')
+        return ee.Filter.calendarRange(month, month, 'month') # type: ignore
 
     month_filters = [filter_by_month(month) for month in months_list]
-    month_filter = ee.Filter.Or(month_filters)
+    month_filter = ee.Filter.Or(month_filters) # type: ignore
     collection = (
         ee.ImageCollection(collection_name)
         .filterBounds(ee.Geometry.Polygon(polygon))
@@ -120,7 +120,7 @@ def count_images_in_ee_collection(
     end_date: Union[str, datetime],
     max_cloud_cover: float = 95,
     satellites: Collection[str] = ("L5", "L7", "L8", "L9", "S2"),
-    tiers: list[str] = None,
+    tiers: list[int] = None,
     months_list:list[int] = None
 ) -> dict:
     """
@@ -132,7 +132,7 @@ def count_images_in_ee_collection(
     end_date (str or datetime): The end date of the time period. If a string, it should be in 'YYYY-MM-DD' format.
     max_cloud_cover (float, optional): The maximum cloud cover percentage. Images with a cloud cover percentage higher than this will be excluded. Defaults to 99.
     satellites (Collection[str], optional): A collection of satellite names. The function will return image counts for these satellites. Defaults to ("L5","L7","L8","L9","S2").
-    tiers (list[str], optional): A list of tiers. The function will return image counts for these tiers. Defaults to [1,2]
+    tiers (list[int], optional): A list of tiers. The function will return image counts for these tiers. Defaults to [1,2]
     months_list (list[int], optional): A list of months to filter the images by. Defaults to None meaning all the months will be included.
     Returns:
     dict: A dictionary where the keys are the satellite names and the values are the image counts.

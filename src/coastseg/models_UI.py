@@ -2,7 +2,7 @@ import logging
 import os
 
 from IPython.display import display
-from coastseg import common, file_utilities, settings_UI, zoo_model
+from coastseg import common, core_utilities, file_utilities, settings_UI, zoo_model
 from coastseg.tide_correction import compute_tidal_corrections
 from coastseg.upload_feature_widget import FileUploader
 from ipyfilechooser import FileChooser
@@ -151,7 +151,8 @@ class UI_Models:
         @output.capture(clear_output=True)
         def enter_clicked(btn):
             session_name = str(self.shoreline_session_name_text.value).strip()
-            session_path = file_utilities.create_directory(os.getcwd(), "sessions")
+            base_path = os.path.abspath(core_utilities.get_base_dir())
+            session_path = file_utilities.create_directory(base_path, "sessions")
             new_session_path = os.path.join(session_path, session_name)
             if os.path.exists(new_session_path):
                 print(f"Session {session_name} already exists at {new_session_path} and will be overwritten.")
@@ -179,7 +180,8 @@ class UI_Models:
         @output.capture(clear_output=True)
         def enter_clicked(btn):
             session_name = str(self.session_name_text.value).strip()
-            session_path = file_utilities.create_directory(os.getcwd(), "sessions")
+            base_path = os.path.abspath(core_utilities.get_base_dir())
+            session_path = file_utilities.create_directory(base_path, "sessions")
             new_session_path = os.path.join(session_path, session_name)
             if os.path.exists(new_session_path):
                 print(f"Session {session_name} already exists at {new_session_path}")

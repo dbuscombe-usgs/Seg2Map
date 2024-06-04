@@ -74,7 +74,7 @@ from tqdm.auto import tqdm
 # Local application/library specific imports
 import pyTMD.utilities
 from coastseg.file_utilities import progress_bar_context, load_package_resource
-
+from coastseg import core_utilities
 
 # FILE SIZES for files in these files
 LOAD_TIDE_FILES = {
@@ -804,7 +804,7 @@ def ftp_download_file(
 def download_fes_tides(
     user="",
     password="",  # New parameter for password
-    directory=os.path.join(os.getcwd(), "tide_model"),
+    directory=os.path.join(os.path.abspath(core_utilities.get_base_dir()), "tide_model"),
     tide=["FES2014"],
     load=True,
     currents=False,
@@ -832,7 +832,7 @@ def download_fes_tides(
 
 
 def clip_model_to_regions(
-    tide_model_directory: str = os.path.join(os.getcwd(), "tide_model"),
+    tide_model_directory: str = os.path.join(os.path.abspath(core_utilities.get_base_dir()), "tide_model"),
     regions_file: str = "",
     use_progess_bar: bool = True,
 ):
