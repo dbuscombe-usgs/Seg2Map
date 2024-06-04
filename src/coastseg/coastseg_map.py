@@ -870,7 +870,7 @@ class CoastSeg_Map:
 
         return feature_gdf
 
-    def preview_available_images(self):
+    def preview_available_images(self,selected_ids: set = None):
         """
         Preview the available satellite images for selected regions of interest (ROIs).
 
@@ -881,6 +881,9 @@ class CoastSeg_Map:
         satellite.
 
         It provides a progress bar using `tqdm` to indicate the processing of each ROI.
+        Args:
+        selected_ids (set, optional): A set of selected ROI IDs. Defaults to None. 
+                                      These ids are used to select the ROIs to preview available images for.
 
         Attributes:
         rois (object): An object that should contain the ROIs, including a GeoDataFrame (`gdf` attribute)
@@ -912,12 +915,17 @@ class CoastSeg_Map:
         # check that ROIs exist and one has been clicked
         exception_handler.check_if_None(self.rois, "ROI")
         exception_handler.check_if_gdf_empty(self.rois.gdf, "ROI")
-        exception_handler.check_selected_set(self.selected_set)
+        if selected_ids is None:
+            selected_ids = self.get_selected_ids()
+
+        exception_handler.check_selected_set(selected_ids)
         # get the start and end date to check available images
         start_date, end_date = self.settings["dates"]
         # for each selected ID return the images available for each site
-        for roi_id in tqdm(self.selected_set, desc="Processing", leave=False):
+        for roi_id in tqdm(selected_ids, desc="Processing", leave=False):
             polygon = common.get_roi_polygon(self.rois.gdf, roi_id)
+            if polygon is None:
+                raise Exception(f"ROI ID {roi_id} not found in the ROIs GeoDataFrame")
             if polygon:
                 # only get the imagery in tier 1
                 images_count = count_images_in_ee_collection(
