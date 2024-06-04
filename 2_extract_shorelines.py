@@ -1,6 +1,9 @@
+import os
 from coastseg import coastseg_logs
 from coastseg import coastseg_map
-import os
+from coastseg import core_utilities
+
+base_dir = core_utilities.get_base_dir()
 
 # Run this script only after running 1_download_imagery.py 
 
@@ -10,7 +13,7 @@ coastsegmap=coastseg_map.CoastSeg_Map(create_map=False)
 # Enter the name of the session you want to load here
 session_name = 'sample_session1'
 # session_name = 'paper_dfg2_extract_shorelines_buffer_62'
-session_path = os.path.join(os.getcwd(),'sessions', session_name)
+session_path = os.path.join(os.path.abspath(base_dir),'sessions', session_name)
 print(f"Loading session from {session_path}")
 # r"C:\development\doodleverse\coastseg\CoastSeg\sessions\paper_dfg2_extract_shorelines_buffer_62"
 coastsegmap.load_fresh_session(session_path)
