@@ -106,7 +106,6 @@ def check_percent_no_data_allowed(
         bool: True if the percentage of no data pixels is less than or equal to the allowed percentage, False otherwise.
     """
     if percent_no_data_allowed is not None:
-        percent_no_data_allowed = percent_no_data_allowed / 100
         num_total_pixels = cloud_mask.shape[0] * cloud_mask.shape[1]
         percentage_no_data = np.sum(im_nodata) / num_total_pixels
         if percentage_no_data > percent_no_data_allowed:

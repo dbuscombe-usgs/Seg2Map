@@ -722,7 +722,7 @@ class Zoo_Model:
         use_GPU = settings.get('use_GPU', "0")
         use_otsu = settings.get('otsu', False)
         use_tta = settings.get('tta', False)
-        percent_no_data = settings.get('percent_no_data', 50.0)
+        percent_no_data = settings.get('percent_no_data', 0.5)
         
         # make a progress bar to show the progress of the model and shoreline extraction
         prog_bar = tqdm.auto.tqdm(range(2),
@@ -1143,7 +1143,7 @@ class Zoo_Model:
         # filter out files with no data pixels greater than percent_no_data
         len_before = len(model_ready_files)
         model_ready_files = filter_no_data_pixels(model_ready_files, percent_no_data)
-        print(f"From {len_before} files {len_before - len(model_ready_files)} files were filtered out due to no data pixels percentage being greater than {percent_no_data}%.")
+        print(f"From {len_before} files {len_before - len(model_ready_files)} files were filtered out due to no data pixels percentage being greater than {percent_no_data*100}%.")
         
         return model_ready_files
 
