@@ -125,6 +125,8 @@ def get_kmeans_clusters(input_rmse: np.array, rmse: list) -> tuple:
         np.mean(np.array(rmse)[labels == 0]),
         np.mean(np.array(rmse)[labels == 1]),
     ]
+    if scores[0]>scores[1]:
+        labels = 1-labels
     return labels, scores
 
 
