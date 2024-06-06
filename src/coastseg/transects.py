@@ -161,11 +161,13 @@ def load_intersecting_transects(
 
     # Create a list to store the GeoDataFrames
     gdf_list = []
-
     # Iterate over each transect file and select the transects that intersect with the rectangle
     for transect_file in transect_files:
         transects_name = os.path.splitext(transect_file)[0]
         transect_path = os.path.join(transect_dir, transect_file)
+        if not os.path.exists(transect_path):
+            logger.warning("Transect file %s does not exist", transect_path)
+            continue
         transects = gpd.read_file(transect_path, bbox=bbox)
         # keep only those transects that intersect with the rectangle
         transects = transects[transects.intersects(rectangle.unary_union)]

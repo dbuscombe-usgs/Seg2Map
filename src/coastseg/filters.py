@@ -5,6 +5,7 @@ import xarray as xr
 import os, shutil
 from sklearn.cluster import KMeans
 from statistics import mode
+import pathlib
 
 # Logger setup
 logger = logging.getLogger(__name__)
@@ -26,7 +27,16 @@ def copy_files(files: list, dest_folder: str) -> None:
         dest_path = os.path.join(dest_folder, os.path.basename(f))
         if os.path.exists(os.path.abspath(dest_path)):
             continue
-        shutil.copy(f, dest_folder)
+        # shutil.copy(f, dest_folder)
+        shutil.move(f, dest_path)
+        # move the matching png files to the respective folders
+        parent_dir = os.path.abspath(pathlib.Path(f).parent)
+        png_file = os.path.basename(f.replace("_res.npz","_predseg.png"))
+        png_path = os.path.join(parent_dir, png_file)
+        if os.path.exists(png_path):
+            dest_path = os.path.join(dest_folder, os.path.basename(png_path))
+            shutil.move(png_path, dest_path)
+            
 
 
 def load_data(f: str) -> np.array:
@@ -110,7 +120,10 @@ def measure_rmse(da: xr.DataArray, times: list, timeav: xr.DataArray) -> tuple:
 
 def get_kmeans_clusters(input_rmse: np.array, rmse: list) -> tuple:
     """
-    Perform KMeans clustering on RMSE values.
+    Perform KMeans clustering on RMSE values. 
+    Returns the average rmse score for each cluster as well as the labels for each cluster.
+    score[0] is the average rmse for the cluster 0.
+    score [1] is the average rmse for the cluster 1.
 
     Args:
         input_rmse (np.array): Array of RMSE values.
@@ -121,6 +134,8 @@ def get_kmeans_clusters(input_rmse: np.array, rmse: list) -> tuple:
     """
     kmeans = KMeans(n_clusters=2, random_state=0, n_init="auto").fit(input_rmse)
     labels = kmeans.labels_
+    # Calculate mean RMSE for each cluster
+    # the lower the RMSE the better the prediction
     scores = [
         np.mean(np.array(rmse)[labels == 0]),
         np.mean(np.array(rmse)[labels == 1]),
@@ -164,6 +179,7 @@ def handle_files_and_directories(
     logger.info(f"Copying {len(files_good)} files to {dest_folder_good}")
     copy_files(files_bad, dest_folder_bad)
     copy_files(files_good, dest_folder_good)
+    # get the matching png files and copy them to the respective folders
 
 
 def return_valid_files(files: list) -> list:
