@@ -128,7 +128,6 @@ class ROI(Feature):
             None.
         """
         # make sure to perform a CRS check here too
-
         rois_gdf = common.preprocess_geodataframe(
             rois_gdf,
             columns_to_keep=["id", "geometry"],
@@ -144,6 +143,9 @@ class ROI(Feature):
         drop_ids = common.get_ids_with_invalid_area(
             rois_gdf, max_area=ROI.MAX_SIZE, min_area=ROI.MIN_SIZE
         )
+        # convert the ids to strings
+        rois_gdf["id"] = rois_gdf["id"].astype(str)
+        
         if drop_ids:
             logger.info(f"Dropping ROIs that are an invalid size {drop_ids}")
             rois_gdf.drop(index=drop_ids, axis=0, inplace=True)
@@ -284,7 +286,18 @@ class ROI(Feature):
         return list(self.get_all_extracted_shorelines().keys())
 
     def add_geodataframe(self, gdf: gpd.GeoDataFrame) -> "ROI":
-        """Adds the geodataframe to the map"""
+        """
+            Adds a GeoDataFrame to the existing ROI object.
+
+            Args:
+                gdf (gpd.GeoDataFrame): The GeoDataFrame to be added.
+
+            Returns:
+                ROI: The updated ROI object.
+
+            Raises:
+                None
+        """
         # check if geodataframe column has 'id' column and add one if one doesn't exist
         if "id" not in gdf.columns:
             gdf["id"] = gdf.index.astype(str).tolist()
