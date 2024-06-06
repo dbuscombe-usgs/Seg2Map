@@ -6,6 +6,7 @@ import logging
 # Internal Python imports
 from coastseg import exception_handler
 from coastseg import common
+from coastseg import core_utilities
 from coastseg import file_utilities
 from coastseg.extract_shorelines_widget import Extracted_Shoreline_widget
 
@@ -27,7 +28,6 @@ from ipywidgets import SelectMultiple
 from ipywidgets import Output
 from ipywidgets import FloatText
 from ipywidgets import Accordion
-from ipywidgets import Checkbox
 
 
 from coastseg.settings_UI import Settings_UI
@@ -531,7 +531,7 @@ class UI:
         def enter_clicked(btn):
             # create the session directory
             session_name = str(self.session_name_text.value).strip()
-            session_path = os.path.join(os.getcwd(), "sessions")
+            session_path = os.path.join( os.path.abspath(core_utilities.get_base_dir()), "sessions")
             new_session_path = os.path.join(session_path, session_name)
             if os.path.exists(new_session_path):
                 print(f"Session {session_name} already exists. This session's data will be overwritten.")

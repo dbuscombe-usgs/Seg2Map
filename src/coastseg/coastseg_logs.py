@@ -1,14 +1,14 @@
 import os
 from datetime import datetime
 import logging
-
+from coastseg import core_utilities
 # DESCRIPTION: Sets up a logging system that writes logs to a file named with the current timestamp in a "logs" directory.
 
 
 def prepare_logging():
     """create a directory named 'logs' in the current working directory if a 'logs' directory does not exist"""
-    if not os.path.exists(os.path.abspath(os.path.join(os.getcwd(), "logs"))):
-        os.mkdir(os.path.abspath(os.path.join(os.getcwd(), "logs")))
+    if not os.path.exists(os.path.abspath(os.path.join(core_utilities.get_base_dir(), "logs"))):
+        os.mkdir(os.path.abspath(os.path.join(core_utilities.get_base_dir(), "logs")))
 
 
 def clear_default_handlers() -> None:
@@ -22,10 +22,10 @@ def create_root_logger():
     log_<year>-<month>-<day>-<hour>-<minute>. This log file will  be written to by all the other loggers
     """
     log_filename = "log_" + datetime.now().strftime("%m-%d-%y-%I_%M_%S") + ".txt"
-    log_file = os.path.abspath(os.path.join(os.getcwd(), "logs", log_filename))
+    log_file = os.path.abspath(os.path.join(core_utilities.get_base_dir(), "logs", log_filename))
     # configure the logger
     log_format = "%(asctime)s - %(filename)s at line %(lineno)s in %(funcName)s() - %(levelname)s : %(message)s"
-    os.path.abspath(os.path.join(os.getcwd(), "logs"))
+    os.path.abspath(os.path.join(core_utilities.get_base_dir(), "logs"))
     # Use FileHandler() to log to a file
     file_handler = logging.FileHandler(log_file, mode="a")
     formatter = logging.Formatter(log_format)

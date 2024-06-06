@@ -32,6 +32,7 @@ from coastseg.downloads import count_images_in_ee_collection
 from coastseg import file_utilities
 from coastseg import geodata_processing
 from coastseg import tide_correction
+from coastseg import core_utilities
 
 # Internal/Local imports: modules
 from coastseg import (
@@ -108,7 +109,17 @@ class ExtractShorelinesContainer(traitlets.HasTraits):
         self.roi_ids_list = []
 
 
-def find_shorelines_directory(path, roi_id):
+def find_shorelines_directory(path:str, roi_id:str):
+    """
+    Find the directory containing the extracted shorelines geojson file.
+
+    Args:
+        path (str): The path to search for the extracted shorelines file.
+        roi_id (str): The ROI ID to check for a directory with the same ID.
+
+    Returns:
+        str: The path to the directory containing the extracted shorelines file, or None if not found.
+    """
     # List the contents of the specified path
     contents = os.listdir(path)
 
@@ -611,7 +622,8 @@ class CoastSeg_Map:
         if os.path.isdir(dir_path):
             # ensure coastseg\data location exists
             if not data_path:
-                data_path = file_utilities.create_directory(os.getcwd(), "data")
+                base_path = os.path.abspath(core_utilities.get_base_dir())
+                data_path = file_utilities.create_directory(base_path, "data")
             config_geojson_path = os.path.join(dir_path, "config_gdf.geojson")
             config_json_path = os.path.join(dir_path, "config.json")
             # load the config files if they exist
@@ -740,7 +752,8 @@ class CoastSeg_Map:
             return parent_session_name
 
         if not data_path:
-            data_path = file_utilities.create_directory(os.getcwd(), "data")
+            base_path = os.path.abspath(core_utilities.get_base_dir())
+            data_path = file_utilities.create_directory(base_path, "data")
 
         # load the session name
         session_path = os.path.abspath(session_path)
@@ -986,7 +999,7 @@ class CoastSeg_Map:
         """
         # Get the location where the downloaded imagery will be saved
         if not file_path:
-            file_path = os.path.abspath(os.path.join(os.getcwd(), "data"))
+            file_path = os.path.abspath(os.path.join(core_utilities.get_base_dir(), "data"))
         # used to uniquely identify the folder where the imagery will be saved
         # example  ID_12_datetime06-05-23__04_16_45
         date_str = file_utilities.generate_datestring()
@@ -1180,7 +1193,6 @@ class CoastSeg_Map:
             if roi_ids is None:
                 roi_ids = self.get_roi_ids()
                 
-        #@todo should I update the ROI settings with the currently loaded settings?
         if isinstance(roi_ids, str):
             roi_ids = [roi_ids]
         # if the rois do not have any settings then save the currently loaded settings to the ROIs
@@ -1188,8 +1200,8 @@ class CoastSeg_Map:
             filtered_gdf = self.rois.gdf[self.rois.gdf['id'].isin(roi_ids)]
             geojson_str = filtered_gdf.to_json()
             geojson_dict = json.loads(geojson_str)
-            # filepath_data = filepath or os.path.abspath(os.getcwd())
-            filepath_data = filepath or os.path.abspath(os.path.join(os.getcwd(), "data"))
+            base_path = os.path.abspath(core_utilities.get_base_dir())
+            filepath_data = filepath or os.path.abspath(os.path.join(base_path, "data"))
             roi_settings = common.create_roi_settings(
                 settings, geojson_dict, filepath_data,
                 )
@@ -1253,7 +1265,7 @@ class CoastSeg_Map:
                 print("Saved config files for each ROI")
             else:
                 # if data is not downloaded save to coastseg directory
-                filepath = os.path.abspath(os.getcwd())
+                filepath = os.path.abspath(core_utilities.get_base_dir())
                 save_config_files(config_json, config_gdf, filepath)
                 print(f"Saved config files for each ROI to {filepath}")
 
@@ -2049,7 +2061,8 @@ class CoastSeg_Map:
                 bool: True if the session exists, False otherwise.
             """
             session_name = self.get_session_name()
-            session_path = os.path.join(os.getcwd(), "sessions", session_name)
+            base_path = os.path.abspath(core_utilities.get_base_dir())
+            session_path = os.path.join(base_path, "sessions", session_name)
             if os.path.exists(session_path):
                 # check if session directory contains a directory with the roi_id
                 dirs=os.listdir(session_path)

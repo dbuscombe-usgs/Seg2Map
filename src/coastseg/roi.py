@@ -139,6 +139,9 @@ class ROI(Feature):
         )
         # make sure all the ids  are unique
         rois_gdf = common.create_unique_ids(rois_gdf, prefix_length=3)
+        # convert the ids to strings
+        rois_gdf["id"] = rois_gdf["id"].astype(str)
+        
         # get row ids of ROIs with area that's too large
         drop_ids = common.get_ids_with_invalid_area(
             rois_gdf, max_area=ROI.MAX_SIZE, min_area=ROI.MIN_SIZE
