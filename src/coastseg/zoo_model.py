@@ -48,6 +48,36 @@ import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
+def setup_logger(
+    folder,
+    base_filename="download_report",
+    log_format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+):
+    # Determine the next available log file number
+    i = 1
+    while True:
+        log_filename = f"{base_filename}{i}.txt" if i > 1 else f"{base_filename}.txt"
+        log_filepath = os.path.join(folder, log_filename)
+        if not os.path.exists(log_filepath):
+            break
+        i += 1
+
+    # Create a custom logger
+    logger = logging.getLogger("extract_shorelines_logger")
+    logger.setLevel(logging.INFO)  # Log all levels of messages
+
+    # Create handlers
+    file_handler = logging.FileHandler(log_filepath)
+    file_handler.setLevel(logging.INFO)
+
+    # Create formatters and add it to handlers
+    log_format = logging.Formatter(log_format)
+    file_handler.setFormatter(log_format)
+
+    # Add handlers to the logger
+    logger.addHandler(file_handler)
+
+    return logger
 
 def filter_no_data_pixels(files: list[str], percent_no_data: float = 0.50) -> list[str]:
     def percentage_of_black_pixels(img: "PIL.Image") -> float:
@@ -77,11 +107,11 @@ def filter_no_data_pixels(files: list[str], percent_no_data: float = 0.50) -> li
         if file.endswith(".jpg") or file.endswith(".jpeg") or file.endswith(".png"):
             img = Image.open(file)
             percentage = percentage_of_black_pixels(img)
+       
             if percentage <= percent_no_data:
                 valid_images.append(file)
 
     return valid_images
-
 
 def get_files_to_download(
     available_files: List[dict], filenames: List[str], model_id: str, model_path: str
@@ -788,9 +818,11 @@ class Zoo_Model:
             shoreline_extraction_area_path (str, optional): The path to the shoreline extraction area. Defaults to "".
         Returns:
             None
-        """
-        logger.info(f"extract_shoreline_settings: {settings}")
-
+        """ 
+        # logger.info("extract_shoreline_settings: %s", settings)     
+        
+        
+        
         # save the selected model session
         settings["model_session_path"] = session_path
         self.set_settings(**settings)
@@ -802,7 +834,18 @@ class Zoo_Model:
 
         
         new_session_path.mkdir(parents=True, exist_ok=True)
+        
+        logger = setup_logger(
+            new_session_path,
+            "extract_shorelines_report",
+            log_format="%(levelname)s - %(message)s",
+        )
+        # by default assume no ROI
+        roi_id = None
+        logger.info(f"Extract Shorelines Settings: {settings}")
 
+        # roi_settings = get_roi_settings_from_config(session_path)
+        
         # load the ROI settings from the config file
         try:
             config = file_utilities.load_json_data_from_file(
@@ -824,13 +867,13 @@ class Zoo_Model:
                 raise Exception(
                     f"The roi ID {roi_id} did not exist is the config.json \n config.json: {config}"
                 )
-        logger.info(f"roi_settings: {roi_settings}")
-
+            
+        logger.info(f"Settings of the ROI having shorelines extracted: {roi_settings}")
         # read ROI from config geojson file
         config_geojson_location = file_utilities.find_file_recursively(
             session_path, "config_gdf.geojson"
         )
-        logger.info(f"config_geojson_location: {config_geojson_location}")
+        logger.info(f"Location of config_gdf.geojson: {config_geojson_location}")
         config_gdf = geodata_processing.read_gpd_file(config_geojson_location)
         roi_gdf = config_gdf[config_gdf["id"] == roi_id]
         if roi_gdf.empty:

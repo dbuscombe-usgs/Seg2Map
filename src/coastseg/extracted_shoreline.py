@@ -559,6 +559,8 @@ def process_satellite_image(
     Returns:
         dict: A dictionary containing the extracted shoreline and cloud cover percentage.
     """
+    logger = logging.getLogger('extract_shorelines_logger')
+    
     # get image date
     date = filename[:19]
     # get the filenames for each of the tif files (ms, pan, qa)
@@ -592,15 +594,17 @@ def process_satellite_image(
     # compute cloud_cover percentage (with no data pixels)
     cloud_cover_combined = get_cloud_cover_combined(cloud_mask)
     if cloud_cover_combined > 0.99:  # if 99% of cloudy pixels in image skip
-        logger.info(f"cloud_cover_combined > 0.99 : {filename} ")
+        logger.info(f"cloud cover and no data covererage exceeds 99% skipping : {filename} ")
         return None
 
     # compute cloud cover percentage (without no data pixels)
     cloud_cover = get_cloud_cover(cloud_mask, im_nodata)
+    logger.info(f"{satname} {date} cloud cover : {cloud_cover:.2%}")
     # skip image if cloud cover is above user-defined threshold
     if cloud_cover > settings["cloud_thresh"]:
-        logger.info(f"Cloud thresh exceeded for {filename}")
+        logger.info(f"Cloud thresh exceeded {cloud_cover} > {settings['cloud_thresh']} skipping {filename}")
         return None
+    logger.info(f"The cloud cover was : {cloud_cover}")
     # calculate a buffer around the reference shoreline (if any has been digitised)
     # buffer is dilated by 5 pixels
     ref_shoreline_buffer = SDS_shoreline.create_shoreline_buffer(
@@ -612,7 +616,7 @@ def process_satellite_image(
         npz_file = find_matching_npz(filename, session_path)
     # logger.info(f"npz_file: {npz_file}")
     if npz_file is None:
-        logger.warning(f"npz file not found for {filename}")
+        logger.warning(f"Npz file not found. Skipping {filename}")
         return None
 
     # get the labels for water and land
@@ -1310,7 +1314,7 @@ def find_shoreline(
     except Exception as e:
         logger.error(f"{e}\nCould not map shoreline for this image: {filename}")
         return None
-    # print(f"Settings used by process_shoreline: {settings}")
+            
     # process the water contours into a shoreline
     shoreline = SDS_shoreline.process_shoreline(
         contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings
@@ -1345,6 +1349,7 @@ def extract_shorelines_with_dask(
     Returns:
         dict: A dictionary containing the extracted shorelines for each satellite.
     """
+    logger = logging.getLogger('extract_shorelines_logger')
     sitename = settings["inputs"]["sitename"]
     filepath_data = settings["inputs"]["filepath"]
 
@@ -1358,6 +1363,7 @@ def extract_shorelines_with_dask(
 
     # get the list of files that were sorted as 'good'
     filtered_files = get_filtered_files_dict(good_folder, "npz", sitename)
+    
     # keep only the metadata for the files that were sorted as 'good'
     metadata = edit_metadata(metadata, filtered_files)
 
@@ -1874,9 +1880,11 @@ class Extracted_Shoreline:
         Returns:
         - object: The Extracted_Shoreline class instance.
         """
+        
         # validate input parameters are not empty and are of the correct type
         self._validate_input_params(roi_id, shoreline, roi_settings, settings)
 
+        logger = logging.getLogger('extract_shorelines_logger')
         logger.info(f"Extracting shorelines for ROI id: {roi_id}")
 
         # read model settings from session path
@@ -1893,7 +1901,7 @@ class Extracted_Shoreline:
         # read model card from downloaded models path
         downloaded_models_dir = common.get_downloaded_models_dir()
         downloaded_models_path = os.path.join(downloaded_models_dir, model_type)
-        logger.info(
+        logger.info(            
             f"Searching for model card in downloaded_models_path: {downloaded_models_path}"
         )
         model_card_path = file_utilities.find_file_by_regex(
@@ -1925,10 +1933,8 @@ class Extracted_Shoreline:
         )
         # Check and log 'reference_shoreline' if it exists
         ref_sl = self.shoreline_settings.get("reference_shoreline", np.array([]))
-        if isinstance(ref_sl, np.ndarray):
-            logger.info(f"reference_shoreline.shape: {ref_sl.shape}")
         logger.info(
-            f"Number of 'reference_shoreline': {len(ref_sl)} for ROI {roi_id}"
+            f"Length of 'reference_shoreline': {len(ref_sl)} for ROI {roi_id}"
         )
         # gets metadata used to extract shorelines
         metadata = get_metadata(self.shoreline_settings["inputs"])
@@ -1983,6 +1989,7 @@ class Extracted_Shoreline:
             extracted_shorelines_dict = remove_duplicates(
                 extracted_shorelines_dict
             )  # removes duplicates (images taken on the same date by the same satellite
+            
             extracted_shorelines_dict = remove_inaccurate_georef(
                 extracted_shorelines_dict, 10
             )  # remove inaccurate georeferencing (set threshold to 10 m)

@@ -3373,10 +3373,10 @@ def create_roi_settings(
     dates = settings["dates"]
     for roi in selected_rois["features"]:
         roi_id = str(roi["properties"]["id"])
+        polygon = roi["geometry"]["coordinates"]
         sitename = (
             "" if date_str == "" else "ID_" + str(roi_id) + "_datetime" + date_str
         )
-        polygon = roi["geometry"]["coordinates"]
         inputs_dict = {
             "dates": dates,
             "sat_list": sat_list,
