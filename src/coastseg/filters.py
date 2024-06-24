@@ -256,6 +256,19 @@ def filter_model_outputs(
 
     rmse, input_rmse = measure_rmse(da, times, timeav)
     labels, scores = get_kmeans_clusters(input_rmse, rmse)
+
+    # get the parent directory of good dir
+    parent_dir = os.path.abspath(pathlib.Path(dest_folder_good).parent)
+    # check if a file called model_settings.json exists in the parent directory
+    settings_file = os.path.join(parent_dir, "model_settings.json")
+    if os.path.exists(settings_file):
+        import json
+        with open(settings_file) as f:
+            settings = json.load(f)
+            # add the model score to the settings
+            # drop any NaN values from the scores
+            settings["model_scores"] = scores[~np.isnan(scores)].tolist()
+
     files_bad, files_good = get_good_bad_files(valid_files, labels, scores)
     handle_files_and_directories(
         files_bad, files_good, dest_folder_bad, dest_folder_good
