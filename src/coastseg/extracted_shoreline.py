@@ -1,6 +1,7 @@
 # Standard library imports
 import colorsys
 import copy
+import shapely
 import shutil
 import fnmatch
 import json
@@ -55,7 +56,7 @@ from coastsat.SDS_tools import (
     remove_duplicates,
     remove_inaccurate_georef,
 )
-from coastsat.SDS_transects import compute_intersection_QC
+# from coastsat.SDS_transects import compute_intersection_QC
 from coastsat import SDS_preprocess, SDS_shoreline, SDS_tools
 from ipyleaflet import GeoJSON
 from matplotlib import gridspec
@@ -70,6 +71,10 @@ from coastseg.validation import get_satellites_in_directory
 from coastseg.filters import filter_model_outputs, apply_land_mask
 from coastseg.common import get_filtered_files_dict, edit_metadata
 
+from scipy.spatial import KDTree
+from shapely.geometry import LineString
+from skimage import transform
+import pytz
 
 # Set pandas option
 pd.set_option("mode.chained_assignment", None)
@@ -90,6 +95,273 @@ def time_func(func):
 
     return wrapper
 
+def filter_shoreline_new(
+    shoreline,
+    shoreline_extraction_area,
+    output_epsg,
+):
+    """Filter the shoreline based on the extraction area.
+    Args:
+        shoreline (array): The original shoreline data.
+        shoreline_extraction_area (GeoDataFrame): The area to extract the shoreline from.
+        shoreline_extraction_area (GeoDataFrame): The area to extract the shoreline from.
+    Returns:
+        np.array: The filtered shoreline as a numpy array of shape (n,2).
+    """
+    if shoreline_extraction_area is not None:
+        # Ensure both the shoreline and extraction area are in the same CRS.
+        shoreline_extraction_area_gdf = shoreline_extraction_area.to_crs(
+            f"epsg:{output_epsg}"
+        )
+
+        if isinstance(shoreline, gpd.GeoDataFrame):
+            shoreline_gdf = shoreline.to_crs(f"epsg:{output_epsg}")
+        else:
+            # Convert the shoreline to a GeoDataFrame.
+            shoreline_gdf = SDS_shoreline.create_gdf_from_type(
+                shoreline,
+                "lines",
+                crs=f"epsg:{output_epsg}",
+            )
+            if shoreline_gdf is None:
+                return shoreline
+
+        # Filter shorelines within the extraction area.
+        filtered_shoreline_gdf = common.ref_poly_filter(
+            shoreline_extraction_area_gdf, shoreline_gdf
+        )
+        return filtered_shoreline_gdf
+
+    return shoreline
+
+def compute_intersection_QC(
+    output,
+    transects,
+    along_dist=25,
+    min_points=3,
+    max_std=15,
+    max_range=30,
+    min_chainage=-100,
+    multiple_inter="auto",
+    prc_multiple=0.1,
+    use_progress_bar: bool = True,
+    **kwargs,
+):
+    """
+    More advanced function to compute the intersection between the 2D mapped shorelines
+    and the transects. Produces more quality-controlled time-series of shoreline change.
+    Arguments:
+    -----------
+        output: dict
+            contains the extracted shorelines and corresponding dates.
+        transects: dict
+            contains the X and Y coordinates of the transects (first and last point needed for each
+            transect).
+        along_dist: int (in metres)
+            alongshore distance to calculate the intersection (median of points
+            within this distance).
+        min_points: int
+            minimum number of shoreline points to calculate an intersection.
+        max_std: int (in metres)
+            maximum std for the shoreline points when calculating the median,
+            if above this value then NaN is returned for the intersection.
+        max_range: int (in metres)
+            maximum range for the shoreline points when calculating the median,
+            if above this value then NaN is returned for the intersection.
+        min_chainage: int (in metres)
+            furthest landward of the transect origin that an intersection is
+            accepted, beyond this point a NaN is returned.
+        multiple_inter: mode for removing outliers ('auto', 'nan', 'max').
+        prc_multiple: float, optional
+            percentage to use in 'auto' mode to switch from 'nan' to 'max'.
+        use_progress_bar(bool,optional). Defaults to True. If true uses tqdm to display the progress for iterating through transects.
+            False, means no progress bar is displayed.
+        kwargs: dict
+            additional keyword arguments.(used for compatibility with other functions)
+    Returns:
+    -----------
+        cross_dist: dict
+            time-series of cross-shore distance along each of the transects. These are not tidally
+            corrected.
+    """
+
+    cross_dist = {}
+
+    shorelines = output["shorelines"]
+    transect_keys = list(transects.keys())
+    if use_progress_bar:
+        transect_keys = tqdm(
+            transect_keys, desc="Computing transect shoreline intersections"
+        )
+
+    for key in transect_keys:
+        std_intersect = np.full(len(shorelines), np.nan)
+        med_intersect = np.full(len(shorelines), np.nan)
+        max_intersect = np.full(len(shorelines), np.nan)
+        min_intersect = np.full(len(shorelines), np.nan)
+        n_intersect = np.full(len(shorelines), np.nan)
+
+        transect_start = transects[key][0, :]
+        transect_end = transects[key][-1, :]
+        transect_vector = transect_end - transect_start
+        transect_length = np.linalg.norm(transect_vector)
+        transect_unit_vector = transect_vector / transect_length
+        rotation_matrix = np.array(
+            [
+                [transect_unit_vector[0], transect_unit_vector[1]],
+                [-transect_unit_vector[1], transect_unit_vector[0]],
+            ]
+        )
+
+        for i, shoreline in enumerate(shorelines):
+            if len(shoreline) == 0:
+                continue
+
+            shoreline_shifted = shoreline - transect_start
+            shoreline_rotated = np.dot(rotation_matrix, shoreline_shifted.T).T
+
+            d_line = np.abs(shoreline_rotated[:, 1])
+            d_origin = np.linalg.norm(shoreline_shifted, axis=1)
+            idx_close = (d_line <= along_dist) & (d_origin <= 1000)
+
+            if not np.any(idx_close):
+                continue
+
+            valid_points = shoreline_rotated[idx_close, 0]
+            valid_points = valid_points[valid_points >= min_chainage]
+
+            if np.sum(~np.isnan(valid_points)) < min_points:
+                continue
+
+            std_intersect[i] = np.nanstd(valid_points)
+            med_intersect[i] = np.nanmedian(valid_points)
+            max_intersect[i] = np.nanmax(valid_points)
+            min_intersect[i] = np.nanmin(valid_points)
+            n_intersect[i] = np.sum(~np.isnan(valid_points))
+
+        condition1 = std_intersect <= max_std
+        condition2 = (max_intersect - min_intersect) <= max_range
+        condition3 = n_intersect >= min_points
+        idx_good = condition1 & condition2 & condition3
+
+        if multiple_inter == "auto":
+            prc_over = np.sum(std_intersect > max_std) / len(std_intersect)
+            if prc_over > prc_multiple:
+                med_intersect[~idx_good] = max_intersect[~idx_good]
+                med_intersect[~condition3] = np.nan
+            else:
+                med_intersect[~idx_good] = np.nan
+        elif multiple_inter == "max":
+            med_intersect[~idx_good] = max_intersect[~idx_good]
+            med_intersect[~condition3] = np.nan
+        elif multiple_inter == "nan":
+            med_intersect[~idx_good] = np.nan
+        else:
+            raise ValueError(
+                "The multiple_inter parameter can only be: nan, max, or auto."
+            )
+
+        cross_dist[key] = med_intersect
+
+    return cross_dist
+
+def filter_contours_by_length(
+    contours_epsg: list[np.ndarray], min_length_sl: float
+) -> list[np.ndarray]:
+    """
+    Filters contours by their length.
+    Args:
+        contours_epsg (list[np.ndarray]): List of contours, where each contour is an array of coordinates.
+        min_length_sl (float): Minimum length threshold for the contours.
+    Returns:
+        list[np.ndarray]: List of contours that meet the minimum length requirement.
+    """
+    contours_long = []
+    for wl in contours_epsg:
+        coords = [(wl[k, 0], wl[k, 1]) for k in range(len(wl))]
+        a = LineString(coords)
+        if a.length >= min_length_sl:
+            contours_long.append(wl)
+    return contours_long
+
+
+def filter_points_within_distance_to_mask(
+    contours_2d: list[np.ndarray],
+    mask: np.ndarray,
+    georef: np.ndarray,
+    image_epsg: int,
+    output_epsg: int,
+    distance_threshold: float = 60,
+) -> list[np.ndarray]:
+    """
+    Filters points within a specified distance to a mask.
+    Args:
+        contours_2d (list[np.ndarray]): List of contours, where each contour is an array of coordinates.
+        mask (np.ndarray): Binary mask array.
+        georef (np.ndarray): Georeference information.
+        image_epsg (int): EPSG code of the image coordinate system.
+        output_epsg (int): EPSG code of the output coordinate system.
+        distance_threshold (float, optional): Distance threshold for filtering. Defaults to 60.
+    Returns:
+        list[np.ndarray]: List of contours filtered by the distance to the mask.
+    """
+    idx_mask = np.where(mask)
+    idx_mask = np.array(
+        [(idx_mask[0][k], idx_mask[1][k]) for k in range(len(idx_mask[0]))]
+    )
+    if len(idx_mask) == 0:
+        return contours_2d
+    coords_in_epsg = SDS_tools.convert_epsg(
+        SDS_tools.convert_pix2world(idx_mask, georef), image_epsg, output_epsg
+    )[:, :-1]
+    coords_tree = KDTree(coords_in_epsg)
+    new_contours = filter_shorelines_by_distance(
+        contours_2d, coords_tree, distance_threshold
+    )
+    return new_contours
+
+
+def extract_contours(filtered_contours_long):
+    """
+    Extracts x and y coordinates from a list of contours and combines them into a single array.
+    Args:
+        filtered_contours_long (list): List of contours, where each contour is a numpy array with at least 2 columns.
+    Returns:
+        np.ndarray: A transposed array with x coordinates in the first column and y coordinates in the second column.
+    """
+    only_points = [contour[:, :2] for contour in filtered_contours_long]
+    x_points = np.array([])
+    y_points = np.array([])
+
+    for points in only_points:
+        x_points = np.append(x_points, points[:, 0])
+        y_points = np.append(y_points, points[:, 1])
+
+    contours_array = np.transpose(np.array([x_points, y_points]))
+    return contours_array
+
+def filter_shorelines_by_distance(
+    contours_2d: list[np.ndarray], coords_tree: KDTree, distance_threshold: float = 60
+) -> list[np.ndarray]:
+    """
+    Filters shorelines by their distance to a set of coordinates.
+    Args:
+        contours_2d (list[np.ndarray]): List of contours, where each contour is an array of coordinates.
+        coords_tree (KDTree): KDTree of coordinates to compare distances against.
+        distance_threshold (float, optional): Distance threshold for filtering. Defaults to 60.
+    Returns:
+        list[np.ndarray]: List of filtered shorelines.
+    """
+    new_contours = []
+    for shoreline in contours_2d:
+        distances, _ = coords_tree.query(
+            shoreline, distance_upper_bound=distance_threshold
+        )
+        idx_keep = distances >= distance_threshold
+        new_shoreline = shoreline[idx_keep]
+        if len(new_shoreline) > 0:
+            new_contours.append(new_shoreline)
+    return new_contours
 
 def check_percent_no_data_allowed(
     percent_no_data_allowed: float, cloud_mask: np.ndarray, im_nodata: np.ndarray
@@ -243,7 +515,7 @@ def compute_transects_from_roi(
 
     transects = common.get_transect_points_dict(transects_gdf)
     # cross_distance: along-shore distance over which to consider shoreline points to compute median intersection (robust to outliers)
-    cross_distance = compute_intersection_QC(extracted_shorelines, transects, settings)
+    cross_distance = compute_intersection_QC(extracted_shorelines, transects, **settings)
     return cross_distance
 
 
@@ -323,6 +595,177 @@ def combine_satellite_data(satellite_data: dict) -> dict:
 
     return merged_satellite_data
 
+def LineString_to_arr(line):
+    """
+    Makes an array from linestring
+    inputs: line
+    outputs: array of xy tuples
+    """
+    listarray = []
+    for pp in line.coords:
+        listarray.append(pp)
+    nparray = np.array(listarray)
+    return nparray
+
+def arr_to_LineString(coords):
+    """
+    Makes a line feature from a list of xy tuples
+    inputs: coords
+    outputs: line
+    """
+    points = [None]*len(coords)
+    i=0
+    for xy in coords:
+        points[i] = shapely.geometry.Point(xy)
+        i=i+1
+    line = shapely.geometry.LineString(points)
+    return line
+
+def chaikins_corner_cutting(coords, refinements=5):
+    """
+    Smooths out lines or polygons with Chaikin's method
+    """
+    i=0
+    for _ in range(refinements):
+        L = coords.repeat(2, axis=0)
+        R = np.empty_like(L)
+        R[0] = L[0]
+        R[2::2] = L[1:-1:2]
+        R[1:-1:2] = L[2::2]
+        R[-1] = L[-1]
+        coords = L * 0.75 + R * 0.25
+        i=i+1
+    return coords
+
+def smooth_lines(lines:gpd.GeoDataFrame,refinements=5):
+    """
+    Smooths out shorelines with Chaikin's method
+    Shorelines need to be in UTM
+    saves output with '_smooth' appended to original filename in same directory
+
+    inputs:
+    lines (gpd.GeoDataFrame): GeoDataFrame containing shorelines in UTM
+    refinements (int): number of refinemnets for Chaikin's smoothing algorithm
+    outputs:
+    save_path (str): path of output file in UTM
+    """
+    new_lines = lines.copy()
+    for i in range(len(lines)):
+        line = lines.iloc[i]
+        coords = LineString_to_arr(line.geometry)
+        refined = chaikins_corner_cutting(coords, refinements=refinements)
+        refined_geom = arr_to_LineString(refined)
+        # new_lines['geometry'][i] = refined_geom
+        new_lines.loc[i,'geometry'] = refined_geom
+    return new_lines
+
+def process_shoreline_zoo(
+    contours, cloud_mask, im_nodata, georef, image_epsg, settings, date, **kwargs
+):
+    # convert the contours that are currently pixel coordinates to world coordiantes
+    contours_world = SDS_tools.convert_pix2world(contours, georef)
+    contours_epsg = SDS_tools.convert_epsg(
+        contours_world, image_epsg, settings["output_epsg"]
+    )
+    # this is the shoreline in the form of a list of numpy arrays, each array containing the coordinates of a shoreline x,y,z
+    contours_long = filter_contours_by_length(contours_epsg, settings["min_length_sl"])
+    # this removes the z coordinate from each shoreline point, so the format is list of numpy arrays, each array containing the x,y coordinates of a shoreline point
+    contours_2d = [contour[:, :2] for contour in contours_long]
+    # remove shoreline points that are too close to the no data mask
+    new_contours = filter_points_within_distance_to_mask(
+        contours_2d,
+        im_nodata,
+        georef,
+        image_epsg,
+        settings["output_epsg"],
+        distance_threshold=60,
+    )
+    # remove shoreline points that are too close to the cloud mask
+    new_contours = filter_points_within_distance_to_mask(
+        new_contours,
+        cloud_mask,
+        georef,
+        image_epsg,
+        settings["output_epsg"],
+        distance_threshold=settings["dist_clouds"],
+    )
+    filtered_contours_long = filter_contours_by_length(
+        new_contours, settings["min_length_sl"]
+    )
+    contours_shapely = [LineString(contour) for contour in filtered_contours_long]
+    if isinstance(date, str):
+        date_obj = datetime.datetime.strptime(date, "%Y-%m-%d-%H-%M-%S")
+    else:
+        date_obj = date
+
+    cloud_mask_adv = np.logical_xor(cloud_mask, im_nodata)
+    # compute updated cloud cover percentage (without no data pixels)
+    valid_pixels = np.sum(~im_nodata)
+    cloud_cover = np.sum(cloud_mask_adv.astype(int)) / valid_pixels.astype(int)
+
+    gdf = gpd.GeoDataFrame(
+        {
+            "date": np.tile(date_obj, len(contours_shapely)), # type: ignore
+            "cloud_cover": np.tile(cloud_cover, len(contours_shapely)),
+        },
+        geometry=contours_shapely,
+        crs=f"EPSG:{image_epsg}",
+    )
+
+    # smooth the shorelines in the GeoDataFrame
+    gdf = smooth_lines(gdf)
+
+    # print(
+    #     os.path.abspath(f"shoreline_{date_obj.strftime('%Y-%m-%d-%H-%M-%S')}.geojson")
+    # )
+    # gdf.to_file(
+    #     f"shoreline_{date_obj.strftime('%Y-%m-%d-%H-%M-%S')}.geojson", driver="GeoJSON"
+    # )
+    return gdf
+
+def find_shoreline(
+    filename: str,
+    image_epsg: int,
+    settings: dict,
+    cloud_mask_adv: np.ndarray,
+    cloud_mask: np.ndarray,
+    im_nodata: np.ndarray,
+    georef: float,
+    im_labels: np.ndarray,
+    reference_shoreline_buffer: np.ndarray,
+    date: str,
+) -> np.array:
+    """
+    Finds the shoreline in an image.
+    Args:
+        fn (str): The filename of the image.
+        image_epsg (int): The EPSG code of the image.
+        settings (dict): A dictionary containing settings for the shoreline extraction.
+        cloud_mask_adv (numpy.ndarray): A binary mask indicating advanced cloud cover in the image.
+        cloud_mask (numpy.ndarray): A binary mask indicating cloud cover in the image.
+        im_nodata (numpy.ndarray): A binary mask indicating no data pixels in the image.
+        georef (flat): A the georeference code for the image.
+        im_labels (numpy.ndarray): A labeled array indicating the water and land pixels in the image.
+        reference_shoreline_buffer (numpy.ndarray,): A buffer around the reference shoreline.
+    Returns:
+        numpy.ndarray or None: The shoreline as a numpy array, or None if the shoreline could not be found.
+    """
+    try:
+        contours = simplified_find_contours(
+            im_labels, cloud_mask, reference_shoreline_buffer
+        )
+    except Exception as e:
+        logger.error(f"{e}\nCould not map shoreline for this image: {filename}")
+        return None
+    # print(f"Settings used by process_shoreline: {settings}")
+    # process the water contours into a shoreline
+    # shoreline = SDS_shoreline.process_shoreline(
+    #     contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings
+    # )
+    shoreline = process_shoreline_zoo(
+        contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings,date
+    )
+    return shoreline
 
 def process_satellite(
     satname: str,
@@ -634,6 +1077,7 @@ def process_satellite_image(
         georef,
         land_mask,
         ref_shoreline_buffer,
+        date = date,
     )
     if shoreline is None:
         logger.warning(f"\nShoreline not found for {fn}")
@@ -644,17 +1088,26 @@ def process_satellite_image(
     output_epsg = settings["output_epsg"]
     roi_gdf = SDS_preprocess.create_gdf_from_image_extent(height,width, georef,image_epsg,output_epsg)
     # filter shorelines within the extraction area
-    
-    shoreline = SDS_shoreline.filter_shoreline( shoreline,shoreline_extraction_area,output_epsg)
+    shoreline = filter_shoreline_new(shoreline,shoreline_extraction_area,output_epsg)
+
+    # shoreline = SDS_shoreline.filter_shoreline( shoreline,shoreline_extraction_area,output_epsg)
+
     shoreline_extraction_area_array = SDS_shoreline.get_extract_shoreline_extraction_area_array(shoreline_extraction_area, output_epsg, roi_gdf)
     
+    single_shoreline = []
+    for geom in shoreline.geometry:
+        # print(geom)
+        single_shoreline.append(np.array(geom.coords))
+    # convert the shoreline gdf to a numpy array where all the shoreline points are consolidated into a single array
+    shoreline_array = extract_contours(single_shoreline)
+
     # plot the results
     shoreline_detection_figures(
         im_ms,
         cloud_mask,
         land_mask,
         all_labels,
-        shoreline,
+        shoreline_array,
         image_epsg,
         georef,
         settings,
@@ -667,7 +1120,7 @@ def process_satellite_image(
     )
     # create dictionary of output
     output = {
-        "shorelines": shoreline,
+        "shorelines": shoreline_array,
         "cloud_cover": cloud_cover,
     }
     return output
@@ -1274,48 +1727,48 @@ def simplified_find_contours(
     return processed_contours
 
 
-def find_shoreline(
-    filename: str,
-    image_epsg: int,
-    settings: dict,
-    cloud_mask_adv: np.ndarray,
-    cloud_mask: np.ndarray,
-    im_nodata: np.ndarray,
-    georef: float,
-    im_labels: np.ndarray,
-    reference_shoreline_buffer: np.ndarray,
-) -> np.array:
-    """
-    Finds the shoreline in an image.
+# def find_shoreline(
+#     filename: str,
+#     image_epsg: int,
+#     settings: dict,
+#     cloud_mask_adv: np.ndarray,
+#     cloud_mask: np.ndarray,
+#     im_nodata: np.ndarray,
+#     georef: float,
+#     im_labels: np.ndarray,
+#     reference_shoreline_buffer: np.ndarray,
+# ) -> np.array:
+#     """
+#     Finds the shoreline in an image.
 
-    Args:
-        fn (str): The filename of the image.
-        image_epsg (int): The EPSG code of the image.
-        settings (dict): A dictionary containing settings for the shoreline extraction.
-        cloud_mask_adv (numpy.ndarray): A binary mask indicating advanced cloud cover in the image.
-        cloud_mask (numpy.ndarray): A binary mask indicating cloud cover in the image.
-        im_nodata (numpy.ndarray): A binary mask indicating no data pixels in the image.
-        georef (flat): A the georeference code for the image.
-        im_labels (numpy.ndarray): A labeled array indicating the water and land pixels in the image.
-        reference_shoreline_buffer (numpy.ndarray,): A buffer around the reference shoreline.
+#     Args:
+#         fn (str): The filename of the image.
+#         image_epsg (int): The EPSG code of the image.
+#         settings (dict): A dictionary containing settings for the shoreline extraction.
+#         cloud_mask_adv (numpy.ndarray): A binary mask indicating advanced cloud cover in the image.
+#         cloud_mask (numpy.ndarray): A binary mask indicating cloud cover in the image.
+#         im_nodata (numpy.ndarray): A binary mask indicating no data pixels in the image.
+#         georef (flat): A the georeference code for the image.
+#         im_labels (numpy.ndarray): A labeled array indicating the water and land pixels in the image.
+#         reference_shoreline_buffer (numpy.ndarray,): A buffer around the reference shoreline.
 
-    Returns:
-        numpy.ndarray or None: The shoreline as a numpy array, or None if the shoreline could not be found.
-    """
+#     Returns:
+#         numpy.ndarray or None: The shoreline as a numpy array, or None if the shoreline could not be found.
+#     """
 
-    try:
-        contours = simplified_find_contours(
-            im_labels, cloud_mask, reference_shoreline_buffer
-        )
-    except Exception as e:
-        logger.error(f"{e}\nCould not map shoreline for this image: {filename}")
-        return None
-    # print(f"Settings used by process_shoreline: {settings}")
-    # process the water contours into a shoreline
-    shoreline = SDS_shoreline.process_shoreline(
-        contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings
-    )
-    return shoreline
+#     try:
+#         contours = simplified_find_contours(
+#             im_labels, cloud_mask, reference_shoreline_buffer
+#         )
+#     except Exception as e:
+#         logger.error(f"{e}\nCould not map shoreline for this image: {filename}")
+#         return None
+#     # print(f"Settings used by process_shoreline: {settings}")
+#     # process the water contours into a shoreline
+#     shoreline = SDS_shoreline.process_shoreline(
+#         contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings
+#     )
+#     return shoreline
 
 
 @time_func
@@ -1447,10 +1900,10 @@ def get_sorted_model_outputs_directory(
     good_folder = os.path.join(session_path, "good")
     bad_folder = os.path.join(session_path, "bad")
     # empty the good and bad folders 
-    if os.path.exists(good_folder):
-        shutil.rmtree(good_folder)
-    if os.path.exists(bad_folder):
-        shutil.rmtree(bad_folder)
+    # if os.path.exists(good_folder):
+    #     shutil.rmtree(good_folder)
+    # if os.path.exists(bad_folder):
+    #     shutil.rmtree(bad_folder)
         
     os.makedirs(good_folder, exist_ok=True)  # Ensure good_folder exists.
     os.makedirs(bad_folder, exist_ok=True)   # Ensure bad_folder exists.
