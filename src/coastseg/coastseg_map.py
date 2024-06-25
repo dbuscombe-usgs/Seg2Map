@@ -339,8 +339,8 @@ class CoastSeg_Map:
         min_date = projected_gdf["date"].min()
         max_date = projected_gdf["date"].max()
         if min_date == max_date:
-            # If there's only one date, set delta to 0.25
-            delta = np.array([0.25])
+            # If there's only one date (there can be multiple shorelines per one date), set delta to 0.25
+            delta = np.array([0.25] * len(projected_gdf))
         else:
             delta = (projected_gdf["date"] - min_date) / (max_date - min_date)
         # get the colors from the colormap
@@ -475,7 +475,10 @@ class CoastSeg_Map:
         extracted_shorelines = self.update_loadable_shorelines(selected_id)
         self.extract_shorelines_container.trash_list = []
         # load the new extracted shorelines onto the map
-        self.load_extracted_shorelines_on_map(extracted_shorelines, 0)
+        # get the first extracted shoreline in the load_list
+
+        self.load_extracted_shorelines_on_map(extracted_shorelines)
+        # self.load_extracted_shorelines_on_map(extracted_shorelines, 0)
 
     def create_map(self):
         """create an interactive map object using the map_settings
@@ -2414,25 +2417,6 @@ class CoastSeg_Map:
         if self.draw_control.last_action == "deleted":
             self.remove_bbox()
 
-    def load_extracted_shoreline_by_id(self, selected_id: str, row_number: int = 0):
-        """
-        Loads extracted shorelines onto a map for a single region of interest specified by its ID.
-
-        Args:
-            selected_id (str): The ID of the region of interest to plot extracted shorelines for.
-            row_number (int, optional): The row number of the region of interest to plot. Defaults to 0.
-        """
-        # remove any existing extracted shorelines
-        self.remove_extracted_shoreline_layers()
-        # get the extracted shorelines for the selected roi
-        if self.rois is not None:
-            extracted_shorelines = self.rois.get_extracted_shoreline(selected_id)
-            # logger.info(
-            #     f"ROI ID { selected_id} extracted shorelines {extracted_shorelines}"
-            # )
-            # if extracted shorelines exist, load them onto map, if none exist nothing loads
-            self.load_extracted_shorelines_on_map(extracted_shorelines, row_number)
-
     def update_roi_ids_with_shorelines(self) -> list[str]:
         """
         Returns a list of the ROI IDs with extracted shorelines and updates the id_container.ids and the extract_shorelines_container.roi_ids_list with the ROI IDs that have extracted shorelines.
@@ -2495,9 +2479,10 @@ class CoastSeg_Map:
                         lambda x: x.strftime("%Y-%m-%d %H:%M:%S")
                     )
                 self.extract_shorelines_container.load_list = []
-                self.extract_shorelines_container.load_list = (
-                    extracted_shorelines.gdf["satname"] + "_" + formatted_dates
-                ).tolist()
+
+                self.extract_shorelines_container.load_list = list(
+                    set((extracted_shorelines.gdf["satname"] + "_" + formatted_dates).tolist())
+                )
                 self.extract_shorelines_container.trash_list = []
         else:
             logger.warning(f"No shorelines extracted for ROI {selected_id}")
@@ -2510,10 +2495,10 @@ class CoastSeg_Map:
     def load_extracted_shorelines_on_map(
         self,
         extracted_shorelines: extracted_shoreline.Extracted_Shoreline,
-        row_number: int = 0,
     ):
         """
         Loads a stylized extracted shoreline layer onto a map for a single region of interest.
+        Loads the shorelines for the first date in the extracted shorelines.
 
         Args:
             extracted_shoreline (Extracted_Shoreline): An instance of the Extracted_Shoreline class containing the extracted shoreline data.
@@ -2528,15 +2513,12 @@ class CoastSeg_Map:
                 f"No extracted shorelines for ROI {extracted_shorelines.roi_id}"
             )
             return
+        # get the first date from the extracted shorelines
+        first_date = extracted_shorelines.gdf.iloc[[0]]["date"].values[0]
         # check if row number exists in gdf
-        if row_number >= len(extracted_shorelines.gdf):
-            logger.warning(
-                f"Row number {row_number} does not exist in extracted shoreline gdf using row number 0 instead"
-            )
-            row_number = 0
         # load the selected extracted shoreline layer onto the map
         self.load_extracted_shoreline_layer(
-            extracted_shorelines.gdf.iloc[[row_number]], layer_name, colormap="viridis"
+            extracted_shorelines.gdf[extracted_shorelines.gdf["date"]==first_date].copy(), layer_name, colormap="viridis"
         )
 
     def load_feature_on_map(

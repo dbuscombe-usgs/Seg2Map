@@ -95,6 +95,30 @@ def time_func(func):
 
     return wrapper
 
+def stringify_datetime_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """
+    Check if any of the columns in a GeoDataFrame have the type pandas timestamp and convert them to string.
+
+    Args:
+        gdf: A GeoDataFrame.
+
+    Returns:
+        A new GeoDataFrame with the same data as the original, but with any timestamp columns converted to string.
+    """
+    timestamp_cols = [
+        col for col in gdf.columns if pd.api.types.is_datetime64_any_dtype(gdf[col])
+    ]
+
+    if not timestamp_cols:
+        return gdf
+
+    gdf = gdf.copy()
+
+    for col in timestamp_cols:
+        gdf[col] = gdf[col].astype(str)
+
+    return gdf
+
 def filter_shoreline_new(
     shoreline,
     shoreline_extraction_area,
@@ -564,12 +588,6 @@ def combine_satellite_data(satellite_data: dict) -> dict:
         satellite_data[satname].setdefault("cloud_cover", [])
         satellite_data[satname].setdefault("filename", [])
         satellite_data[satname].setdefault("idx", [])
-        satellite_data[satname].setdefault("dates", [])
-        satellite_data[satname].setdefault("geoaccuracy", [])
-        satellite_data[satname].setdefault("shorelines", [])
-        satellite_data[satname].setdefault("cloud_cover", [])
-        satellite_data[satname].setdefault("filename", [])
-        satellite_data[satname].setdefault("idx", [])
         # For each key in the nested dictionary
         for key, value in sat_data.items():
             # Wrap non-list values in a list and concatenate to merged_satellite_data
@@ -655,12 +673,11 @@ def smooth_lines(lines:gpd.GeoDataFrame,refinements=5):
         coords = LineString_to_arr(line.geometry)
         refined = chaikins_corner_cutting(coords, refinements=refinements)
         refined_geom = arr_to_LineString(refined)
-        # new_lines['geometry'][i] = refined_geom
         new_lines.loc[i,'geometry'] = refined_geom
     return new_lines
 
 def process_shoreline_zoo(
-    contours, cloud_mask, im_nodata, georef, image_epsg, settings, date, **kwargs
+    contours, cloud_mask, im_nodata, georef, image_epsg, settings, date,satname:str,**kwargs
 ):
     # convert the contours that are currently pixel coordinates to world coordiantes
     contours_world = SDS_tools.convert_pix2world(contours, georef)
@@ -706,6 +723,7 @@ def process_shoreline_zoo(
     gdf = gpd.GeoDataFrame(
         {
             "date": np.tile(date_obj, len(contours_shapely)), # type: ignore
+            "satname": np.tile(satname, len(contours_shapely)), # type: ignore
             "cloud_cover": np.tile(cloud_cover, len(contours_shapely)),
         },
         geometry=contours_shapely,
@@ -714,13 +732,6 @@ def process_shoreline_zoo(
 
     # smooth the shorelines in the GeoDataFrame
     gdf = smooth_lines(gdf)
-
-    # print(
-    #     os.path.abspath(f"shoreline_{date_obj.strftime('%Y-%m-%d-%H-%M-%S')}.geojson")
-    # )
-    # gdf.to_file(
-    #     f"shoreline_{date_obj.strftime('%Y-%m-%d-%H-%M-%S')}.geojson", driver="GeoJSON"
-    # )
     return gdf
 
 def find_shoreline(
@@ -734,6 +745,7 @@ def find_shoreline(
     im_labels: np.ndarray,
     reference_shoreline_buffer: np.ndarray,
     date: str,
+    satname: str,
 ) -> np.array:
     """
     Finds the shoreline in an image.
@@ -763,8 +775,9 @@ def find_shoreline(
     #     contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings
     # )
     shoreline = process_shoreline_zoo(
-        contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings,date
+        contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings,date,satname,
     )
+    # this is a geodataframe with the shoreline in it with the date and cloud cover
     return shoreline
 
 def process_satellite(
@@ -820,6 +833,8 @@ def process_satellite(
     # filenames of tifs (ms) for this satellite
     filenames = metadata[satname]["filenames"]
     output = {}
+    gdf_list = []
+    all_shorelines_gdf = gpd.GeoDataFrame()
     output.setdefault(satname, {})
     output[satname].setdefault("dates", [])
     output[satname].setdefault("geoaccuracy", [])
@@ -873,7 +888,7 @@ def process_satellite(
             batch * batch_size, min((batch + 1) * batch_size, len(filenames))
         ):
             image_epsg = metadata[satname]["epsg"][index]
-            espg_list.append(image_epsg)
+            # espg_list.append(image_epsg)
             geoaccuracy_list.append(metadata[satname]["acc_georef"][index])
             timestamps.append(metadata[satname]["dates"][index])
             tasks.append(
@@ -882,6 +897,7 @@ def process_satellite(
                     filepath,
                     settings,
                     satname,
+                    metadata[satname]["dates"][index],
                     collection,
                     image_epsg,
                     pixel_size,
@@ -891,6 +907,8 @@ def process_satellite(
                     save_location,
                     settings.get("apply_cloud_mask", True),
                     shoreline_extraction_area,
+                    index = index,
+                    geoaccuracy = metadata[satname]["acc_georef"][index],
                 )
             )
 
@@ -900,21 +918,13 @@ def process_satellite(
         num_tasks_computed = len(tasks)
         pbar.update(num_tasks_computed)
 
-        for index, result in enumerate(results):
-            if result is None:
-                continue
-            output.setdefault(satname, {})
-            output[satname].setdefault("dates", []).append(timestamps[index])
-            output[satname].setdefault("geoaccuracy", []).append(
-                geoaccuracy_list[index]
-            )
-            output[satname].setdefault("shorelines", []).append(result["shorelines"])
-            output[satname].setdefault("cloud_cover", []).append(result["cloud_cover"])
-            output[satname].setdefault("filename", []).append(filenames[index])
-            output[satname].setdefault("idx", []).append(index)
-
+        # merge resulting geodataframes
+        new_gdf_list = [result for result in results if result is not None and isinstance(result, gpd.GeoDataFrame)]
+        gdf_list.extend(new_gdf_list)
+        all_shorelines_gdf = concat_and_sort_geodataframes(gdf_list, "date", "UTC")
     pbar.close()
-    return output
+    # return output
+    return all_shorelines_gdf
 
 
 def get_cloud_cover_combined(cloud_mask: np.ndarray):
@@ -966,12 +976,65 @@ def get_cloud_cover(cloud_mask: np.ndarray, im_nodata: np.ndarray) -> float:
 
     return cloud_cover
 
+def concat_and_sort_geodataframes(
+    gdfs: list[gpd.GeoDataFrame], date_column: str, timezone: str = "UTC"
+) -> gpd.GeoDataFrame:
+    """
+    Concatenates a list of GeoDataFrames with the same columns into a single GeoDataFrame and sorts by a date column.
+
+    Args:
+        gdfs (list[gpd.GeoDataFrame]): List of GeoDataFrames to concatenate.
+        date_column (str): The name of the date column to sort by.
+        timezone (str): The timezone to which naive datetime entries should be localized. Default is 'UTC'.
+
+    Returns:
+        gpd.GeoDataFrame: A single concatenated and sorted GeoDataFrame.
+    """
+    concatenated_gdf = pd.concat(gdfs, ignore_index=True)
+    concatenated_gdf = gpd.GeoDataFrame(concatenated_gdf)
+    print(f"concatenated_gdf[date_column]: {concatenated_gdf[date_column]}")
+
+    # Ensure the date column is in datetime format and remove any NaT values
+    concatenated_gdf[date_column] = pd.to_datetime(
+        concatenated_gdf[date_column], errors="coerce"
+    )
+    concatenated_gdf = concatenated_gdf.dropna(subset=[date_column])
+    print(f"concatenated_gdf[date_column].to_datetime: {concatenated_gdf[date_column]}")
+    tz = pytz.timezone(timezone)
+
+    # Localize timezone-naive datetimes to the specified timezone
+    concatenated_gdf[date_column] = concatenated_gdf[date_column].apply(
+        lambda x: x.tz_localize('UTC').tz_convert(timezone) if x.tzinfo is None else x.tz_convert(timezone)
+    )
+    # Define timezone-aware min and max dates
+    min_date = pd.Timestamp.min.tz_localize('UTC').tz_convert(tz)
+    max_date = pd.Timestamp.max.tz_localize('UTC').tz_convert(tz)
+
+    print(f"min_date: {min_date}")
+    print(f"max_date: {max_date}")
+
+    # Filter out-of-bounds datetime values
+    concatenated_gdf = concatenated_gdf[
+        (concatenated_gdf[date_column] > min_date)
+        & (concatenated_gdf[date_column] < max_date)
+    ]
+
+    sorted_gdf = concatenated_gdf.sort_values(by=date_column).reset_index(drop=True)
+
+    print(sorted_gdf.columns)
+    print(f"concatenated_gdf[date_column] after sorting: {sorted_gdf[date_column]}")
+    # Format the date column to the desired string format
+    sorted_gdf[date_column] = sorted_gdf[date_column].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+
+    return sorted_gdf
 
 def process_satellite_image(
     filename: str,
     filepath: str,
     settings: Dict[str, Dict[str, Union[str, int, float]]],
     satname: str,
+    date:str,
     collection: str,
     image_epsg: int,
     pixel_size: float,
@@ -981,7 +1044,9 @@ def process_satellite_image(
     save_location: str = "",
     apply_cloud_mask: bool = True,
     shoreline_extraction_area : gpd.GeoDataFrame = None,
-) -> Dict[str, Union[np.ndarray, float]]:
+    index: int = None,
+    geoaccuracy: str = None,
+) -> gpd.GeoDataFrame:
     """
     Processes a single satellite image to extract the shoreline.
 
@@ -1078,6 +1143,7 @@ def process_satellite_image(
         land_mask,
         ref_shoreline_buffer,
         date = date,
+        satname=satname,
     )
     if shoreline is None:
         logger.warning(f"\nShoreline not found for {fn}")
@@ -1118,12 +1184,10 @@ def process_satellite_image(
         ref_shoreline_buffer,
         shoreline_extraction_area=shoreline_extraction_area_array,
     )
-    # create dictionary of output
-    output = {
-        "shorelines": shoreline_array,
-        "cloud_cover": cloud_cover,
-    }
-    return output
+    shoreline["filename"] = np.tile(filename, len(shoreline))
+    shoreline["idx"] = np.tile(index, len(shoreline))
+    shoreline["geoaccuracy"] = np.tile(geoaccuracy, len(shoreline))
+    return shoreline
 
 
 def get_model_card_classes(model_card_path: str) -> dict:
@@ -1727,48 +1791,34 @@ def simplified_find_contours(
     return processed_contours
 
 
-# def find_shoreline(
-#     filename: str,
-#     image_epsg: int,
-#     settings: dict,
-#     cloud_mask_adv: np.ndarray,
-#     cloud_mask: np.ndarray,
-#     im_nodata: np.ndarray,
-#     georef: float,
-#     im_labels: np.ndarray,
-#     reference_shoreline_buffer: np.ndarray,
-# ) -> np.array:
-#     """
-#     Finds the shoreline in an image.
+def convert_date_column_to_datetime(
+    gdf: gpd.GeoDataFrame, date_column: str, timezone: str = 'UTC'
+) -> gpd.GeoDataFrame:
+    """
+    Converts the date column of a GeoDataFrame to datetime format with timezone information and converts to datetime.datetime in UTC.
 
-#     Args:
-#         fn (str): The filename of the image.
-#         image_epsg (int): The EPSG code of the image.
-#         settings (dict): A dictionary containing settings for the shoreline extraction.
-#         cloud_mask_adv (numpy.ndarray): A binary mask indicating advanced cloud cover in the image.
-#         cloud_mask (numpy.ndarray): A binary mask indicating cloud cover in the image.
-#         im_nodata (numpy.ndarray): A binary mask indicating no data pixels in the image.
-#         georef (flat): A the georeference code for the image.
-#         im_labels (numpy.ndarray): A labeled array indicating the water and land pixels in the image.
-#         reference_shoreline_buffer (numpy.ndarray,): A buffer around the reference shoreline.
+    Args:
+        gdf (gpd.GeoDataFrame): The GeoDataFrame containing the date column.
+        date_column (str): The name of the date column to convert.
+        timezone (str): The timezone to which naive datetime entries should be localized. Default is 'UTC'.
 
-#     Returns:
-#         numpy.ndarray or None: The shoreline as a numpy array, or None if the shoreline could not be found.
-#     """
+    Returns:
+        gpd.GeoDataFrame: The updated GeoDataFrame with the date column in datetime format with timezone.
+    """
+    # Ensure the date column is in datetime format
+    gdf[date_column] = pd.to_datetime(gdf[date_column], errors="coerce")
 
-#     try:
-#         contours = simplified_find_contours(
-#             im_labels, cloud_mask, reference_shoreline_buffer
-#         )
-#     except Exception as e:
-#         logger.error(f"{e}\nCould not map shoreline for this image: {filename}")
-#         return None
-#     # print(f"Settings used by process_shoreline: {settings}")
-#     # process the water contours into a shoreline
-#     shoreline = SDS_shoreline.process_shoreline(
-#         contours, cloud_mask_adv, im_nodata, georef, image_epsg, settings
-#     )
-#     return shoreline
+    # Drop any rows where the date is NaT
+    gdf = gdf.dropna(subset=[date_column])
+
+    # Convert the date column to string format
+    gdf[date_column] = gdf[date_column].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    # Convert the date column back to datetime in UTC
+    gdf[date_column] = pd.to_datetime(gdf[date_column], format='%Y-%m-%d %H:%M:%S', errors='coerce').dt.tz_localize('UTC')
+
+    return gdf
+
 
 
 @time_func
@@ -1837,9 +1887,18 @@ def extract_shorelines_with_dask(
                 f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('im_quality',[]))} of im_quality: {np.unique(metadata[satname].get('im_quality',[]))}"
             )
 
-    shoreline_dict = {}
+    shoreline_dict = {
+        "dates": [],
+        "shorelines": [],
+        "cloud_cover": [],
+        "geoaccuracy": [],
+        "idx": [],
+        "filename": [],
+        "satname": [],
+    }
+    all_satellite_gdfs = []
     for satname in metadata.keys():
-        satellite_dict = process_satellite(
+        satellite_gdf = process_satellite(
             satname,
             settings,
             metadata,
@@ -1851,36 +1910,57 @@ def extract_shorelines_with_dask(
             shoreline_extraction_area=shoreline_extraction_area,
             **kwargs,
         )
-        if not satellite_dict:
-            shoreline_dict[satname] = {}
-        elif not satname in satellite_dict.keys():
-            shoreline_dict[satname] = {}
-        else:
-            shoreline_dict[satname] = satellite_dict[satname]
+        if satellite_gdf is not None:
+            all_satellite_gdfs.append(satellite_gdf)
 
-    for satname in shoreline_dict.keys():
-        # Check and log 'reference shoreline' if it exists
-        ref_sl = shoreline_dict[satname].get("shorelines", np.array([]))
-        if isinstance(ref_sl, np.ndarray):
-            logger.info(f"shorelines.shape: {ref_sl.shape}")
-        logger.info(f"Number of 'shorelines' for {satname}: {len(ref_sl)}")
-        if shoreline_dict[satname] == {}:
-            logger.info(f"No shorelines found for {satname}")
-        else:
-            logger.info(
-                f"result_dict['{satname}'] length {len(shoreline_dict[satname].get('dates',[]))} of dates[:3] {list(islice(shoreline_dict[satname].get('dates',[]),3))}"
-            )
-            logger.info(
-                f"result_dict['{satname}'] length {len(shoreline_dict[satname].get('geoaccuracy',[]))} of geoaccuracy: {np.unique(shoreline_dict[satname].get('geoaccuracy',[]))}"
-            )
-            logger.info(
-                f"result_dict['{satname}'] length {len(shoreline_dict[satname].get('cloud_cover',[]))} of cloud_cover: {np.unique(shoreline_dict[satname].get('cloud_cover',[]))}"
-            )
-            logger.info(
-                f"result_dict['{satname}'] length {len(shoreline_dict[satname].get('filename',[]))} of filename[:3]{list(islice(shoreline_dict[satname].get('filename',[]),3))}"
-            )
     # combine the extracted shorelines for each satellite
-    return combine_satellite_data(shoreline_dict)
+    all_shorelines_gdf = concat_and_sort_geodataframes(all_satellite_gdfs, "date", "UTC")
+
+    all_shorelines_gdf = all_shorelines_gdf.reset_index(drop=True)
+    # convert to epsg 4326
+    all_shorelines_gdf_4326 = all_shorelines_gdf.to_crs(epsg=4326)
+    # drop the filename column
+    all_shorelines_gdf_4326.drop(columns=["filename"],inplace=True)
+
+    print(f"all_shorelines_gdf_4326: {all_shorelines_gdf_4326}")
+    if all_shorelines_gdf_4326.empty:
+        print("No shorelines were extracted.")
+        logger.warning("No shorelines were extracted.")
+        return {}
+    # Save extracted shorelines to GeoJSON files
+    all_shorelines_gdf_4326.to_file(
+        os.path.join(session_path, 'extracted_shorelines_lines.geojson'), driver="GeoJSON"
+    )
+
+    print(f"extracted_shorelines_lines.geojson saved to {os.path.join(session_path, 'extracted_shorelines_lines.geojson')}")
+
+    # convert linestrings to multipoints
+    points_gdf = convert_linestrings_to_multipoints(all_shorelines_gdf_4326)
+    projected_gdf = stringify_datetime_columns(points_gdf)
+    # Save extracted shorelines as a GeoJSON file
+    projected_gdf.to_file(
+        os.path.join(session_path, 'extracted_shorelines_points.geojson'), driver="GeoJSON"
+    )
+
+    print(f"extracted_shorelines_points.geojson saved to {os.path.join(session_path, 'extracted_shorelines_points.geojson')}")
+
+    # convert the extracted shorelines dates to ISO 8601 format
+    all_shorelines_gdf = convert_date_column_to_datetime(all_shorelines_gdf, 'date')
+    # create a dictionary of the extracted shorelines
+    for date, group in all_shorelines_gdf.groupby("date"):
+        print(f"Processing date: {date}")
+        shorelines = [np.array(geom.coords) for geom in group.geometry]
+        contours_array = extract_contours(shorelines)
+        shoreline_dict["shorelines"].append(contours_array)
+        shoreline_dict["dates"].append(date.to_pydatetime())
+        # Append values for each group, ensuring they are correctly extracted
+        shoreline_dict["cloud_cover"].append(group["cloud_cover"].values[0])
+        shoreline_dict["geoaccuracy"].append(group["geoaccuracy"].values[0])
+        shoreline_dict["idx"].append(group["idx"].values[0])
+        shoreline_dict["filename"].append(group["filename"].values[0])
+        shoreline_dict["satname"].append(group["satname"].values[0])
+
+    return shoreline_dict
 
 
 def get_sorted_model_outputs_directory(
@@ -2468,10 +2548,10 @@ class Extracted_Shoreline:
                 logger.warning(f"No extracted shorelines for ROI {roi_id}")
                 raise exceptions.No_Extracted_Shoreline(roi_id)
 
-            # extracted shorelines have map crs so they can be displayed on the map
-            self.gdf = self.create_geodataframe(
-                self.shoreline_settings["output_epsg"], output_crs="EPSG:4326"
-            )
+            # # extracted shorelines have map crs so they can be displayed on the map
+            # self.gdf = self.create_geodataframe(
+            #     self.shoreline_settings["output_epsg"], output_crs="EPSG:4326"
+            # )
         return self
 
     def _validate_input_params(
