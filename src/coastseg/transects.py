@@ -157,8 +157,7 @@ def load_intersecting_transects(
     else:
         rectangle = rectangle.copy().set_crs(crs)
     # get the bounding box of the rectangle
-    bbox = rectangle.bounds.iloc[0].tolist()
-
+    bbox = tuple(rectangle.bounds.iloc[0].tolist())
     # Create a list to store the GeoDataFrames
     gdf_list = []
     # Iterate over each transect file and select the transects that intersect with the rectangle

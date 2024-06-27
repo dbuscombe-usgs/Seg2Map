@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "coastseg"
 dynamic = ["readme"]
-version = "1.2.7" 
+version = "1.2.9" 
 authors = [
   { name=" Sharon Fitzpatrick", email="sharon.fitzpatrick23@gmail.com" },
 ]
@@ -18,7 +18,7 @@ description = "An interactive python package for satellite derived shoreline wor
 dependencies = [
   "h5py>=3.10.0",
   "pyTMD",
-  "coastsat-package>=0.1.65",
+  "coastsat-package>=0.1.71",
   "area",
   "aiohttp",
   "chardet",

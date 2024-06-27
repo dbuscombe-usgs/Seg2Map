@@ -2016,7 +2016,8 @@ def convert_points_to_linestrings(gdf, group_col='date', output_crs='epsg:4326')
         return gpd.GeoDataFrame(columns=['geometry'])
     # Recreate the groups as a geodataframe
     grouped_gdf = gpd.GeoDataFrame(filtered_groups, geometry='geometry')
-    linestrings = grouped_gdf.groupby(group_col).apply(lambda g: LineString(g.geometry.tolist()))
+    linestrings = grouped_gdf.groupby(group_col,group_keys=False).apply(lambda g: LineString(g.geometry.tolist()))
+
     # Create a new GeoDataFrame from the LineStrings
     linestrings_gdf = gpd.GeoDataFrame(linestrings, columns=['geometry'],)
     linestrings_gdf.reset_index(inplace=True)

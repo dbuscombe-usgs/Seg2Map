@@ -54,13 +54,8 @@ def get_base_dir(repo_name="CoastSeg") -> pathlib.Path:
             cwd = pathlib.Path(os.getcwd())
             proj_dir = resolve_repo_path(cwd, proj_name=repo_name)
         except ValueError as e:
-            # get the currentq working directory
-            cwd = os.getcwd()
-            proj_dir = os.path.join(cwd, repo_name)
-            # this means it was the first time creating it so print a message
-            if not os.path.exists(proj_dir):
-                print(f"Creating {repo_name} because it was not found. Created at {proj_dir}")
-            os.makedirs(proj_dir, exist_ok=True)
+            # get the current working directory if the project directory is not found
+            proj_dir = os.getcwd()
             # convert to a pathlib.Path object
             proj_dir = pathlib.Path(proj_dir)
             
