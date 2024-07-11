@@ -1,5 +1,6 @@
 # Standard library imports
 import colorsys
+import traceback
 import copy
 import shapely
 import shutil
