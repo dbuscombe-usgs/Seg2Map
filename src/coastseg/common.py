@@ -461,7 +461,7 @@ def initialize_gee(
     authenticate_and_initialize(print_mode, force, auth_args, kwargs)
 
 
-def authenticate_and_initialize(print_mode:bool, force:bool, auth_args:dict, kwargs:dict):
+def authenticate_and_initialize(print_mode: bool, force: bool, auth_args: dict, kwargs: dict, attempt: int = 1, max_attempts: int = 2):
     """
     Handles the authentication and initialization of Google Earth Engine.
 
@@ -470,8 +470,10 @@ def authenticate_and_initialize(print_mode:bool, force:bool, auth_args:dict, kwa
         force (bool): Flag indicating whether to force authentication.
         auth_args (dict): Dictionary of authentication arguments for ee.Authenticate().
         kwargs (dict): Dictionary of initialization arguments for ee.Initialize().
+        attempt (int): Current attempt number for authentication.
+        max_attempts (int): Maximum number of authentication attempts.
     """
-    logger.info(f"kwargs {kwargs} force {force} auth_args {auth_args} print_mode {print_mode}")
+    logger.info(f"kwargs {kwargs} force {force} auth_args {auth_args} print_mode {print_mode} attempt {attempt} max_attempts {max_attempts}")
     if print_mode:
         print(f"{'Forcing authentication and ' if force else ''}Initializing Google Earth Engine...\n")
     try:
@@ -489,14 +491,12 @@ def authenticate_and_initialize(print_mode:bool, force:bool, auth_args:dict, kwa
         else:
             print(f"An error occurred: {error_message}\n")
 
-        # Re-attempt authentication only if not already attempted
-        if not force:
-            print("Re-attempting authentication...\n")
-            ee.Authenticate(**auth_args)
-            authenticate_and_initialize( print_mode, True, auth_args, kwargs)  # Force re-authentication on retry
+        # Re-attempt authentication only if attempts are less than max_attempts
+        if attempt < max_attempts:
+            print(f"Re-attempting authentication (Attempt {attempt + 1}/{max_attempts})...\n")
+            authenticate_and_initialize(print_mode, True, auth_args, kwargs, attempt + 1, max_attempts)  # Force re-authentication on retry
         else:
-            raise Exception(f"Failed to initialize Google Earth Engine: {error_message}")
-
+            raise Exception(f"Failed to initialize Google Earth Engine after {attempt} attempts: {error_message}")
 
 def create_new_config(roi_ids: list, settings: dict, roi_settings: dict) -> dict:
     """
@@ -1608,6 +1608,7 @@ def export_dataframe_as_geojson(data:pd.DataFrame, output_file_path:str, x_col:s
 def create_complete_line_string(points):
     """
     Create a complete LineString from a list of points.
+    If there is only a single point in the list, a Point object is returned instead of a LineString.
 
     Args:
         points (numpy.ndarray): An array of points representing the coordinates.
@@ -1653,6 +1654,9 @@ def create_complete_line_string(points):
         current_point = nearest_point
 
     # Convert the sorted list of points to a LineString
+    if len(sorted_points) < 2:
+        return Point(sorted_points[0])
+
     return LineString(sorted_points)
 
 def order_linestrings_gdf(gdf,dates, output_crs='epsg:4326'):
@@ -1682,6 +1686,7 @@ def order_linestrings_gdf(gdf,dates, output_crs='epsg:4326'):
         lines.append(line_string)
     
     gdf = gpd.GeoDataFrame({'geometry': lines,'date': dates},crs=output_crs)
+
     return gdf
 
 
@@ -1705,48 +1710,42 @@ def add_shore_points_to_timeseries(timeseries_data: pd.DataFrame,
     utm_crs = transects.estimate_utm_crs()
     transects_utm = transects.to_crs(utm_crs)
     
-    ##need some placeholders
-    shore_x_vals = [None]*len(timeseries_data)
-    shore_y_vals = [None]*len(timeseries_data)
-    timeseries_data['shore_x'] = shore_x_vals
-    timeseries_data['shore_y'] = shore_y_vals
+    # Initialize shore_x and shore_y columns
+    timeseries_data['shore_x'] = np.nan
+    timeseries_data['shore_y'] = np.nan
 
     ##loop over all transects
-    for i in range(len(transects_utm)):
-        transect = transects_utm.iloc[i]
+    for i, transect in transects_utm.iterrows():
         transect_id = transect['id']
         first = transect.geometry.coords[0]
         last = transect.geometry.coords[1]
         
-        idx = timeseries_data['transect_id'].str.contains(transect_id)
-        ##in case there is a transect in the config_gdf that doesn't have any intersections
-        ##skip that transect
-        if np.any(idx):
-            timeseries_data_filter = timeseries_data[idx]
-        else:
+        # Filter timeseries data for the current transect_id
+        idx = timeseries_data['transect_id'] == transect_id
+        if not np.any(idx):
             continue
-
-        idxes = timeseries_data_filter.index
-        distances = timeseries_data_filter['cross_distance']
+        
+        timeseries_data_filter = timeseries_data[idx]
+        distances = timeseries_data_filter['cross_distance'].values
+        # idxes = timeseries_data_filter.index
+        # distances = timeseries_data_filter['cross_distance']
 
         angle = np.arctan2(last[1] - first[1], last[0] - first[0])
 
         shore_x_utm = first[0]+distances*np.cos(angle)
         shore_y_utm = first[1]+distances*np.sin(angle)
-        points_utm = [shapely.Point(xy) for xy in zip(shore_x_utm, shore_y_utm)]
+        # points_utm = [shapely.Point(xy) for xy in zip(shore_x_utm, shore_y_utm)]
 
         #conversion from utm to wgs84, put them in the transect_timeseries csv and utm gdf
-        dummy_gdf_utm = gpd.GeoDataFrame({'geometry':points_utm},
-                                         crs=utm_crs)
-        dummy_gdf_wgs84 = dummy_gdf_utm.to_crs(org_crs)
-
-        points_wgs84 = [shapely.get_coordinates(p) for p in dummy_gdf_wgs84.geometry]
-        points_wgs84 = np.array(points_wgs84)
-        points_wgs84 = points_wgs84.reshape(len(points_wgs84),2)
-        x_wgs84 = points_wgs84[:,0]
-        y_wgs84 = points_wgs84[:,1]
-        timeseries_data.loc[idxes,'shore_x'] = x_wgs84
-        timeseries_data.loc[idxes,'shore_y'] = y_wgs84
+        points_utm = gpd.GeoDataFrame({'geometry': [Point(x, y) for x, y in zip(shore_x_utm, shore_y_utm)]}, crs=utm_crs)
+        # Convert shore points to WGS84
+        points_wgs84 = points_utm.to_crs(org_crs)
+        # dummy_gdf_wgs84 = dummy_gdf_utm.to_crs(org_crs)
+        coords_wgs84 = np.array([point.coords[0] for point in points_wgs84.geometry])
+        
+        # Update timeseries data with shore_x and shore_y
+        timeseries_data.loc[idx, 'shore_x'] = coords_wgs84[:, 0]
+        timeseries_data.loc[idx, 'shore_y'] = coords_wgs84[:, 1]
 
     return timeseries_data
 
@@ -1907,7 +1906,7 @@ def save_transects(
     Returns:
         None.
     """    
-    cross_distance_df =get_cross_distance_df(
+    cross_distance_df = get_cross_distance_df(
         extracted_shorelines, cross_distance_transects
     )
     cross_distance_df.dropna(axis="columns", how="all", inplace=True)
@@ -1924,8 +1923,8 @@ def save_transects(
     # re-order columns
     merged_timeseries_df = merged_timeseries_df[['dates', 'x', 'y', 'transect_id', 'cross_distance']]
     # add the shore_x and shore_y columns to the merged time series which are the x and y coordinates of the shore points along the transects
-    merged_timeseries_df,timeseries_df = add_lat_lon_to_timeseries(merged_timeseries_df, transects_gdf.to_crs('epsg:4326'),cross_distance_df,
-                              save_location,
+    merged_timeseries_df,timeseries_df = add_lat_lon_to_timeseries(merged_timeseries_df,
+                                                                    transects_gdf.to_crs('epsg:4326'),cross_distance_df,save_location,
                               drop_intersection_pts,
                               "raw")
     # save the raw transect time series which contains the columns ['dates', 'x', 'y', 'transect_id', 'cross_distance','shore_x','shore_y']  to file

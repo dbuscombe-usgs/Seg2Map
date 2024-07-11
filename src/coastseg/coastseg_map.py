@@ -344,7 +344,7 @@ class CoastSeg_Map:
         else:
             delta = (projected_gdf["date"] - min_date) / (max_date - min_date)
         # get the colors from the colormap
-        colors = plt.cm.get_cmap(colormap)(delta)
+        colors = plt.get_cmap(colormap)(delta)
 
         # convert RGBA colors to Hex
         colors_hex = [

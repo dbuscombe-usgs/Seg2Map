@@ -16,11 +16,143 @@ import numpy as np
 from shapely import geometry
 import pandas as pd
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, call
 import pytest
 from coastseg import common
 from typing import Dict, List, Union
-from unittest.mock import patch
+
+
+def test_authenticate_and_initialize_success():
+    with patch('coastseg.common.ee.Authenticate') as mock_authenticate, \
+         patch('coastseg.common.ee.Initialize') as mock_initialize:
+        
+        # Mock successful initialization
+        mock_initialize.return_value = None
+        
+        common.authenticate_and_initialize(print_mode=True, force=False, auth_args={}, kwargs={})
+
+        mock_authenticate.assert_called_once() # this will call once becase ee.credentials is None
+        mock_initialize.assert_called_once()
+
+def test_authenticate_and_initialize_force_auth():
+    with patch('coastseg.common.ee.Authenticate') as mock_authenticate, \
+         patch('coastseg.common.ee.Initialize') as mock_initialize:
+        
+        # Mock successful initialization
+        mock_initialize.return_value = None
+        
+        common.authenticate_and_initialize(print_mode=True, force=True, auth_args={}, kwargs={})
+
+        mock_authenticate.assert_called_once_with(force=True)
+        mock_initialize.assert_called_once()
+
+def test_authenticate_and_initialize_retry():
+    with patch('coastseg.common.ee.Authenticate') as mock_authenticate, \
+         patch('coastseg.common.ee.Initialize') as mock_initialize:
+        
+        # Mock an exception on first initialize, then success
+        mock_initialize.side_effect = [Exception("Credentials file not found"), None]
+
+        common.authenticate_and_initialize(print_mode=True, force=False, auth_args={}, kwargs={})
+
+        assert mock_authenticate.call_count == 2
+        assert mock_initialize.call_count == 2
+
+def test_authenticate_and_initialize_max_attempts():
+    with patch('coastseg.common.ee.Authenticate') as mock_authenticate, \
+         patch('coastseg.common.ee.Initialize') as mock_initialize:
+        
+        # Mock an exception for all initialize attempts
+        mock_initialize.side_effect = Exception("Credentials file not found")
+        
+        with pytest.raises(Exception) as excinfo:
+            common.authenticate_and_initialize(print_mode=True, force=False, auth_args={}, kwargs={})
+        
+        assert "Failed to initialize Google Earth Engine after 2 attempts" in str(excinfo.value)
+        assert mock_authenticate.call_count == 2
+        assert mock_initialize.call_count == 2
+
+
+def test_order_linestrings_gdf_empty():
+    gdf = gpd.GeoDataFrame({'geometry': []})
+    dates = []
+    result = common.order_linestrings_gdf(gdf, dates)
+    assert result.empty, "Expected an empty GeoDataFrame for empty input"
+
+def test_order_linestrings_gdf_single_linestring():
+    points = np.array([[0, 0], [1, 1]])
+    gdf = gpd.GeoDataFrame({'geometry': [LineString(points)]}, crs='epsg:4326')
+    dates = ['2023-01-01']
+    result = common.order_linestrings_gdf(gdf, dates)
+    expected_line = common.create_complete_line_string(points)
+    assert len(result) == 1, "Expected one linestring in the result"
+    assert result.iloc[0].geometry.equals(expected_line), "The geometry of the linestring is incorrect"
+    assert result.iloc[0].date == '2023-01-01', "The date is incorrect"
+
+def test_order_linestrings_gdf_multiple_linestrings():
+    points1 = np.array([[0, 0], [1, 1]])
+    points2 = np.array([[1, 1], [2, 2]])
+    gdf = gpd.GeoDataFrame({'geometry': [LineString(points1), LineString(points2)]}, crs='epsg:4326')
+    dates = ['2023-01-01', '2023-01-02']
+    result = common.order_linestrings_gdf(gdf, dates)
+    expected_line1 = common.create_complete_line_string(points1)
+    expected_line2 = common.create_complete_line_string(points2)
+    assert len(result) == 2, "Expected two linestrings in the result"
+    assert result.iloc[0].geometry.equals(expected_line1), "The geometry of the first linestring is incorrect"
+    assert result.iloc[1].geometry.equals(expected_line2), "The geometry of the second linestring is incorrect"
+    assert result.iloc[0].date == '2023-01-01', "The first date is incorrect"
+    assert result.iloc[1].date == '2023-01-02', "The second date is incorrect"
+
+# def test_order_linestrings_gdf_crs_conversion():
+#     points = np.array([[0, 0], [1, 1]])
+#     gdf = gpd.GeoDataFrame({'geometry': [LineString(points)]}, crs='epsg:3857')
+#     dates = ['2023-01-01']
+#     result = common.order_linestrings_gdf(gdf, dates, output_crs='epsg:4326')
+#     assert result.crs.to_string() == 'epsg:4326', "The CRS is not converted to 'epsg:4326'"
+    
+def test_order_linestrings_gdf_duplicate_points():
+    points = np.array([[0, 0], [1, 1], [1, 1], [2, 2]])
+    gdf = gpd.GeoDataFrame({'geometry': [LineString(points)]}, crs='epsg:4326')
+    dates = ['2023-01-01']
+    result = common.order_linestrings_gdf(gdf, dates)
+    expected_line = common.create_complete_line_string(points)
+    assert len(result) == 1, "Expected one linestring in the result"
+    assert result.iloc[0].geometry.equals(expected_line), "The geometry of the linestring is incorrect"
+    assert result.iloc[0].date == '2023-01-01', "The date is incorrect"
+
+
+def test_no_points():
+    points = np.array([])
+    result = common.create_complete_line_string(points)
+    assert result is None, "Expected None for no points"
+
+def test_single_point():
+    points = np.array([[1, 1]])
+    result = common.create_complete_line_string(points)
+    assert isinstance(result, Point), "Expected Point for a single point"
+    assert result.x == 1 and result.y == 1, "Expected Point with coordinates (1,1)"
+
+def test_multiple_points_straight_line():
+    points = np.array([[0, 0], [1, 1], [2, 2]])
+    result = common.create_complete_line_string(points)
+    assert isinstance(result, LineString), "Expected LineString for multiple points"
+    expected_coords = [(0, 0), (1, 1), (2, 2)]
+    assert list(result.coords) == expected_coords, "Expected coordinates to be in a straight line"
+
+def test_multiple_points_non_straight_line():
+    points = np.array([[0, 0], [2, 2], [1, 1], [3, 3]])
+    result = common.create_complete_line_string(points)
+    assert isinstance(result, LineString), "Expected LineString for multiple points"
+    expected_coords = [(0, 0), (1, 1), (2, 2), (3, 3)]
+    assert list(result.coords) == expected_coords, "Expected coordinates to be in a sorted line"
+
+def test_duplicate_points():
+    points = np.array([[0, 0], [1, 1], [1, 1], [2, 2]])
+    result =  common.create_complete_line_string(points)
+    assert isinstance(result, LineString), "Expected LineString for multiple points"
+    expected_coords = [(0, 0), (1, 1), (2, 2)]
+    assert list(result.coords) == expected_coords, "Expected coordinates to be unique and sorted"
+
 
 def test_get_missing_roi_dirs():
     roi_settings = {
@@ -2237,3 +2369,21 @@ def test_convert_points_to_linestrings_not_enough_pts():
 
     # Check the result
     assert len(linestrings_gdf) == 0
+
+def test_convert_points_to_linestrings_single_point_per_date():
+    # Create a GeoDataFrame with points
+    points = [Point(0, 0), Point(1, 1)]
+    gdf = gpd.GeoDataFrame(geometry=points,)
+    # this should cause the last point to be filtered out because it doesn't have a another points with a matching date
+    gdf['date'] = ['1/1/2020','1/1/2020']
+
+
+    # Set an initial CRS
+    gdf.crs = "EPSG:4326"
+
+    # Convert points to LineStrings with a different CRS
+    output_crs = "EPSG:3857"
+    linestrings_gdf = convert_points_to_linestrings(gdf, output_crs=output_crs)
+
+    # Check the result
+    assert len(linestrings_gdf) == 1

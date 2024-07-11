@@ -1969,7 +1969,7 @@ def plot_image_with_legend(
     if im_ref_buffer is not None:
         masked_array = np.ma.masked_where(im_ref_buffer == False, im_ref_buffer)
     # color map for the reference shoreline buffer
-    masked_cmap = plt.cm.get_cmap("PiYG")
+    masked_cmap = plt.get_cmap("PiYG")
 
     # if original_image is wider than 2.5 times as tall, plot the images in a 3x1 grid (vertical)
     if original_image.shape[0] > 2.5 * original_image.shape[1]:

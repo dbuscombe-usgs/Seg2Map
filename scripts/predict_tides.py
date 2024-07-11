@@ -54,6 +54,7 @@ def convert_date_gdf(gdf):
 def create_complete_line_string(points):
     """
     Create a complete LineString from a list of points.
+    If there is only a single point in the list, a Point object is returned instead of a LineString.
 
     Args:
         points (numpy.ndarray): An array of points representing the coordinates.
@@ -99,7 +100,11 @@ def create_complete_line_string(points):
         current_point = nearest_point
 
     # Convert the sorted list of points to a LineString
+    if len(sorted_points) < 2:
+        return Point(sorted_points[0])
+
     return LineString(sorted_points)
+
 
 def order_linestrings_gdf(gdf,dates, output_crs='epsg:4326'):
     """
