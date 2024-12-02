@@ -315,6 +315,9 @@ class Transects(Feature):
             )
             # if not all the ids in transects are unique then create unique ids
             transects = create_unique_ids(transects, prefix_length=3)
+            # if an id column exists then make sure it is a string
+            if "id" in transects.columns:
+                transects["id"] = transects["id"].astype(str)
             self.gdf = transects
 
     def initialize_transects_with_bbox(self, bbox: gpd.GeoDataFrame):
