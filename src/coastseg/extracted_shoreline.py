@@ -47,7 +47,7 @@ import skimage.measure as measure
 import skimage.morphology as morphology
 
 from coastsat.SDS_download import get_metadata
-from coastsat.SDS_shoreline import extract_shorelines
+# from coastsat.SDS_shoreline import extract_shorelines
 from coastsat.SDS_tools import (
     get_filenames,
     get_filepath,
@@ -67,8 +67,8 @@ from tqdm.auto import tqdm
 # Internal dependencies imports
 from coastseg import common, exceptions
 from coastseg.validation import get_satellites_in_directory
-from coastseg.filters import filter_model_outputs, apply_land_mask
-from coastseg.common import get_filtered_files_dict, edit_metadata
+from coastseg.filters import filter_model_outputs
+
 
 
 # Set pandas option
@@ -610,7 +610,6 @@ def process_satellite_image(
     npz_file = find_matching_npz(filename, os.path.join(session_path, "good"))
     if npz_file is None:
         npz_file = find_matching_npz(filename, session_path)
-    # logger.info(f"npz_file: {npz_file}")
     if npz_file is None:
         logger.warning(f"npz file not found for {filename}")
         return None
@@ -1146,7 +1145,6 @@ def shoreline_detection_figures(
         
         
     os.makedirs(filepath, exist_ok=True)
-    # logger.info(f"shoreline_detection_figures filepath: {filepath}")
     logger.info(f"im_ref_buffer.shape: {im_ref_buffer.shape}")
 
     # increase the intensity of the image for visualization
@@ -1355,44 +1353,13 @@ def extract_shorelines_with_dask(
     Returns:
         dict: A dictionary containing the extracted shorelines for each satellite.
     """
-    sitename = settings["inputs"]["sitename"]
-    filepath_data = settings["inputs"]["filepath"]
-
-    # create a subfolder to store the .jpg images showing the detection
+    # create a subfolder to store the .jpg images showing the extracted shoreline detection
     if not save_location:
+        sitename = settings["inputs"]["sitename"]
+        filepath_data = settings["inputs"]["filepath"]
         filepath_jpg = os.path.join(filepath_data, sitename, "jpg_files", "detection")
         os.makedirs(filepath_jpg, exist_ok=True)
 
-    # get the directory containing the good model outputs
-    good_folder = get_sorted_model_outputs_directory(session_path)
-
-    # get the list of files that were sorted as 'good'
-    filtered_files = get_filtered_files_dict(good_folder, "npz", sitename)
-    # keep only the metadata for the files that were sorted as 'good'
-    metadata = edit_metadata(metadata, filtered_files)
-
-    for satname in metadata.keys():
-        if not metadata[satname]:
-            logger.warning(f"metadata['{satname}'] is empty")
-        else:
-            logger.info(
-                f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('epsg',[]))} of epsg: {np.unique(metadata[satname].get('epsg',[]))}"
-            )
-            logger.info(
-                f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('dates',[]))} of dates Sample first five: {list(islice(metadata[satname].get('dates',[]),5))}"
-            )
-            logger.info(
-                f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('filenames',[]))} of filenames Sample first five: {list(islice(metadata[satname].get('filenames',[]),5))}"
-            )
-            logger.info(
-                f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('im_dimensions',[]))} of im_dimensions: {np.unique(metadata[satname].get('im_dimensions',[]))}"
-            )
-            logger.info(
-                f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('acc_georef',[]))} of acc_georef: {np.unique(metadata[satname].get('acc_georef',[]))}"
-            )
-            logger.info(
-                f"edit_metadata metadata['{satname}'] length {len(metadata[satname].get('im_quality',[]))} of im_quality: {np.unique(metadata[satname].get('im_quality',[]))}"
-            )
 
     shoreline_dict = {}
     for satname in metadata.keys():
@@ -1486,9 +1453,6 @@ def get_sorted_model_outputs_directory(
         
         # If there are files sort the files into good and bad folders
         filter_model_outputs(satname, files, good_folder, bad_folder)
-        # Apply the land mask if there are files in the good folder.
-        # if os.listdir(good_folder):
-        #     apply_land_mask(good_folder)
             
     return good_folder
 
@@ -1649,25 +1613,26 @@ class Extracted_Shoreline:
         """
         Extracts the region of interest (ROI) ID from the shoreline settings.
 
-        The method retrieves the sitename field from the shoreline settings inputs dictionary and extracts the
-        ROI ID from it, if present. The sitename field is expected to be in the format "ID_XXXX_datetime03-22-23__07_29_15",
-        where XXXX is the id of the ROI. If the sitename field is not present or is not in the
-        expected format, the method returns None.
-
         shoreline_settings:
         {
             'inputs' {
                 "sitename": 'ID_0_datetime03-22-23__07_29_15',
+                "roi_id": 'ID_0',
+                'polygon': [[[-160.8452704000395, 63.897979992144656], [-160.8452704000395, 63.861546670361975],...]]]
+                'dates':[<start_date>,<end_date>],
+                'sat_list': ['S2', 'L8', 'L9'],
+                ''filepath': 'path/to/Coastseg/data',
                 }
         }
 
         Returns:
             The ROI ID as a string, or None if the sitename field is not present or is not in the expected format.
         """
+        if self.shoreline_settings is None:
+            return None
         inputs = self.shoreline_settings.get("inputs", {})
-        sitename = inputs.get("sitename", "")
-        # checks if the ROI ID is present in the 'sitename' saved in the shoreline settings
-        roi_id = sitename.split("_")[1] if sitename else None
+        # inputs has an 'roi_id' key thats the roi id as a string
+        roi_id = inputs.get("roi_id", None)
         return roi_id
 
     def remove_selected_shorelines(
@@ -1846,7 +1811,7 @@ class Extracted_Shoreline:
         session_path: str = None,
         new_session_path: str = None,
         output_directory: str = None, 
-        shoreline_extraction_area : gpd.geodataframe = None,  
+        shoreline_extraction_area : gpd.GeoDataFrame = None,  
         **kwargs: dict,
     ) -> "Extracted_Shoreline":
         """
@@ -1880,7 +1845,7 @@ class Extracted_Shoreline:
         - output_directory (str): The path to the directory where the extracted shorelines will be saved.
             - detection figures will be saved in a subfolder called 'jpg_files' within the output_directory.
             - extract_shoreline reports will be saved within the output_directory.
-        - shoreline_extraction_area (gpd.geodataframe, optional): A GeoDataFrame containing the area to extract shorelines from. Defaults to None.
+        - shoreline_extraction_area (gpd.GeoDataFrame, optional): A GeoDataFrame containing the area to extract shorelines from. Defaults to None.
         Returns:
         - object: The Extracted_Shoreline class instance.
         """
@@ -1924,6 +1889,7 @@ class Extracted_Shoreline:
         self.shoreline_settings = self.create_shoreline_settings(
             settings, roi_settings, reference_shoreline
         )
+        logger.info(f"self.shoreline_settings['inputs'] {self.shoreline_settings['inputs']}")
         # Log all items except 'reference shoreline' and handle 'reference shoreline' separately
         logger.info(
             "self.shoreline_settings : "
@@ -1933,6 +1899,7 @@ class Extracted_Shoreline:
                 if key != "reference_shoreline"
             )
         )
+
         # Check and log 'reference_shoreline' if it exists
         ref_sl = self.shoreline_settings.get("reference_shoreline", np.array([]))
         if isinstance(ref_sl, np.ndarray):
@@ -1947,7 +1914,17 @@ class Extracted_Shoreline:
 
         # filter out files that were removed from RGB directory
         try:
-            metadata = common.filter_metadata(metadata, sitename, filepath_data)
+            # For coregistered files where I artifically altered the sitename the sitename is different that what I modified it to
+            # If I set the sitename to the original sitename I'll be fine
+            # @todo remove this hardcoded variable for testing only 
+            RGB_directory = os.path.join(
+                filepath_data, sitename, "jpg_files", "preprocessed", "RGB"
+            )
+            metadata= common.filter_metadata_with_dates(metadata,RGB_directory,file_type="jpg") 
+            # sort the good/bad model segmentations and return the directory containing the good model outputs (this is where to put good/bad shoreline segmentation model)
+            good_directory = get_sorted_model_outputs_directory(session_path)
+            metadata= common.filter_metadata_with_dates(metadata,good_directory,file_type="npz") 
+
         except FileNotFoundError as e:
             logger.warning(f"No RGB files existed so no metadata.")
             self.dictionary = {}
@@ -2073,16 +2050,16 @@ class Extracted_Shoreline:
 
     def extract_shorelines(
             self,
-            shoreline_gdf: gpd.geodataframe,
+            shoreline_gdf: gpd.GeoDataFrame,
             roi_settings: dict,
             settings: dict,
             output_directory: str = None, 
-            shoreline_extraction_area : gpd.geodataframe = None           
+            shoreline_extraction_area : gpd.GeoDataFrame = None           
         ) -> dict:
         """
         Extracts shorelines for a specified region of interest (ROI).
         Args:
-            shoreline_gdf (gpd.geodataframe): GeoDataFrame containing the shoreline data.
+            shoreline_gdf (gpd.GeoDataFrame): GeoDataFrame containing the shoreline data.
             roi_settings (dict): Dictionary containing settings for the ROI. It must have the following keys:
             {
                 "dates": ["2018-12-01", "2019-03-01"],
@@ -2109,7 +2086,7 @@ class Extracted_Shoreline:
             output_directory (str): The path to the directory where the extracted shorelines will be saved.
                 - detection figures will be saved in a subfolder called 'jpg_files' within the output_directory.
                 - extract_shoreline reports will be saved within the output_directory.
-            shoreline_extraction_area (gpd.geodataframe, optional): A GeoDataFrame containing the area to extract shorelines from. Defaults to None.
+            shoreline_extraction_area (gpd.GeoDataFrame, optional): A GeoDataFrame containing the area to extract shorelines from. Defaults to None.
         Returns:
             dict: Dictionary containing the extracted shorelines for the specified ROI.
         """
@@ -2129,7 +2106,10 @@ class Extracted_Shoreline:
 
         # filter out files that were removed from RGB directory
         try:
-            metadata = common.filter_metadata(metadata, sitename, filepath_data)
+            RGB_directory = os.path.join(
+                filepath_data, sitename, "jpg_files", "preprocessed", "RGB"
+            )
+            metadata= common.filter_metadata_with_dates(metadata,RGB_directory,file_type="jpg") 
         except FileNotFoundError as e:
             logger.warning(f"No RGB files existed so no metadata.")
             print(
@@ -2161,7 +2141,7 @@ class Extracted_Shoreline:
                 )
 
         # extract shorelines with coastsat's models
-        extracted_shorelines = extract_shorelines(metadata, self.shoreline_settings,output_directory=output_directory, shoreline_extraction_area=shoreline_extraction_area)
+        extracted_shorelines = SDS_shoreline.extract_shorelines(metadata, self.shoreline_settings,output_directory=output_directory, shoreline_extraction_area=shoreline_extraction_area)
         logger.info(f"extracted_shoreline_dict: {extracted_shorelines}")
         # postprocessing by removing duplicates and removing in inaccurate georeferencing (set threshold to 10 m)
         extracted_shorelines = remove_duplicates(
@@ -2347,7 +2327,7 @@ class Extracted_Shoreline:
 
 
 def get_reference_shoreline(
-    shoreline_gdf: gpd.geodataframe, output_crs: str
+    shoreline_gdf: gpd.GeoDataFrame, output_crs: str
 ) -> np.ndarray:
     """
     Converts a GeoDataFrame of shoreline features into a numpy array of latitudes, longitudes, and zeroes representing the mean sea level.
@@ -2379,11 +2359,11 @@ def get_colors(length: int) -> list:
     return cmap_list
 
 
-def make_coastsat_compatible(feature: gpd.geodataframe) -> list:
+def make_coastsat_compatible(feature: gpd.GeoDataFrame) -> list:
     """Return the feature as an np.array in the form:
         [([lat,lon],[lat,lon],[lat,lon]),([lat,lon],[lat,lon],[lat,lon])...])
     Args:
-        feature (gpd.geodataframe): clipped portion of shoreline within a roi
+        feature (gpd.GeoDataFrame): clipped portion of shoreline within a roi
     Returns:
         list: shorelines in form:
             [([lat,lon],[lat,lon],[lat,lon]),([lat,lon],[lat,lon],[lat,lon])...])

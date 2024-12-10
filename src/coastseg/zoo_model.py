@@ -609,7 +609,7 @@ class Zoo_Model:
             "implementation": "BEST",
             "model_type": "global_segformer_RGB_4class_14036903",
             "local_model_path": "", # local path to the directory containing the model
-            "use_local_model": True,  # Use local model (not one from zeneodo)
+            "use_local_model": False,  # Use local model (not one from zeneodo)
             "otsu": False,
             "tta": False,
             "cloud_thresh": 0.5,  # threshold on maximum cloud cover
@@ -1102,6 +1102,7 @@ class Zoo_Model:
             use_otsu: bool,
             use_tta: bool,
             percent_no_data: float,
+            coregistered: bool = False,
         ):
             """
             Runs the model for image segmentation.
@@ -1115,7 +1116,8 @@ class Zoo_Model:
                 use_GPU (str): Whether to use GPU or not.
                 use_otsu (bool): Whether to use Otsu thresholding or not.
                 use_tta (bool): Whether to use test-time augmentation or not.
-                percent_no_data (float): The percentage of no data.
+                percent_no_data (float): The percentage of no data allowed in the image.
+                coregistered (bool, optional): Whether the images are coregistered or not. Defaults to False.
 
             Returns:
                 None
@@ -1152,6 +1154,10 @@ class Zoo_Model:
             roi_directory = file_utilities.find_parent_directory(
                 src_directory, "ID_", "data"
             )
+
+            if coregistered:
+                roi_directory = os.path.join(roi_directory, "coregistered")
+
 
             print(f"Preprocessing the data at {roi_directory}")
             model_dict = self.preprocess_data(roi_directory, model_dict, img_type)

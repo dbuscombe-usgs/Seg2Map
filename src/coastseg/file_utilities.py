@@ -316,7 +316,9 @@ def find_parent_directory(
 
     Parameters:
         path (str): The path to start the search from.
-        directory_name (str): The name of the directory to search for.
+        directory_name (str): Part of the name of the directory to find.
+            For example, directory_name = 'ID' will return the first directory
+            that contains 'ID' in its name.
         stop_directory (str): Optional. A directory name to stop the search at.
                               If this is specified, the search will stop when this
                               directory is reached. If not specified, the search will
@@ -660,6 +662,7 @@ def find_directory_recursively(path: str = ".", name: str = "RGB") -> str:
         for dirpath, dirnames, filenames in os.walk(path):
             if name in dirnames:
                 dir_location = os.path.join(dirpath, name)
+                break # stop searching once the first directory is found
 
     if not os.listdir(dir_location):
         raise Exception(f"{name} directory is empty.")
