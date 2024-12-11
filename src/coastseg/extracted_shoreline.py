@@ -1428,7 +1428,6 @@ def get_sorted_model_outputs_directory(
     os.makedirs(bad_folder, exist_ok=True)   # Ensure bad_folder exists.
     
     satellites = get_satellites_in_directory(session_path)
-    print(f"Satellites in directory: {satellites}")
     # if there is nothing to sort return the good folder
     if not satellites:
         return good_folder
