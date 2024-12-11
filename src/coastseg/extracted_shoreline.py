@@ -1423,17 +1423,22 @@ def get_sorted_model_outputs_directory(
     # for each satellite, sort the model outputs into good & bad
     good_folder = os.path.join(session_path, "good")
     bad_folder = os.path.join(session_path, "bad")
-    # empty the good and bad folders 
-    if os.path.exists(good_folder):
-        shutil.rmtree(good_folder)
-    if os.path.exists(bad_folder):
-        shutil.rmtree(bad_folder)
-        
+
     os.makedirs(good_folder, exist_ok=True)  # Ensure good_folder exists.
     os.makedirs(bad_folder, exist_ok=True)   # Ensure bad_folder exists.
     
     satellites = get_satellites_in_directory(session_path)
     print(f"Satellites in directory: {satellites}")
+    # if there is nothing to sort return the good folder
+    if not satellites:
+        return good_folder
+    
+    # empty the good and bad folders 
+    if os.path.exists(good_folder):
+        shutil.rmtree(good_folder)
+    if os.path.exists(bad_folder):
+        shutil.rmtree(bad_folder)
+
     for satname in satellites:
         print(f"Filtering model outputs for {satname}")
         # Define the pattern for matching files related to the current satellite.
@@ -1923,6 +1928,7 @@ class Extracted_Shoreline:
             metadata= common.filter_metadata_with_dates(metadata,RGB_directory,file_type="jpg") 
             # sort the good/bad model segmentations and return the directory containing the good model outputs (this is where to put good/bad shoreline segmentation model)
             good_directory = get_sorted_model_outputs_directory(session_path)
+            
             metadata= common.filter_metadata_with_dates(metadata,good_directory,file_type="npz") 
 
         except FileNotFoundError as e:
