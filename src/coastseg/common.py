@@ -1377,7 +1377,7 @@ def get_filtered_dates_dict(directory: str, file_type: str, ) -> dict:
             continue
 
         satname = find_satellite_in_filename(filename)
-        if satname is None:
+        if not satname:
             logging.warning(
                 f"Skipping file with unexpected name format which was missing a satname: {filename}"
             )
@@ -1417,39 +1417,6 @@ def filter_metadata_with_dates(metadata: dict, directory:str,file_type:str="jpg"
     filtered_dates_by_sat = get_filtered_dates_dict(directory, file_type)
     # print(f"filtered_dates_by_sat: {filtered_dates_by_sat}")
     metadata = edit_metadata_by_dates(metadata, filtered_dates_by_sat)
-    return metadata
-
-def filter_metadata(metadata: dict, sitename: str, filepath_data: str) -> dict[str]:
-    """
-    This function filters metadata to include only those files that exist in the given directory.
-
-    Parameters:
-    -----------
-    metadata : dict
-        The metadata dictionary to be filtered.
-
-    sitename : str
-        The site name used for filtering.
-
-    filepath_data : str
-        The base filepath where the data is located.
-
-    Returns:
-    --------
-    dict
-        The filtered metadata dictionary.
-    """
-    # Get the RGB directory
-    RGB_directory = os.path.join(
-        filepath_data, sitename, "jpg_files", "preprocessed", "RGB"
-    )
-    if not os.path.exists(RGB_directory):
-        raise FileNotFoundError(
-            f"Cannot extract shorelines from imagery. RGB directory did not exist. {RGB_directory}"
-        )
-    # filter out files that were removed from RGB directory
-    filtered_files = get_filtered_files_dict(RGB_directory, "jpg", sitename)
-    metadata = edit_metadata(metadata, filtered_files)
     return metadata
 
 
@@ -1533,144 +1500,6 @@ def edit_metadata_by_dates(
                         # If indices_to_keep is empty, assign an empty list
                         satellite_metadata[key] = []
     return metadata
-
-def edit_metadata(
-    metadata: Dict[str, Dict[str, Union[str, List[Union[str, datetime, int, float]]]]],
-    filtered_files: Dict[str, Set[str]],
-) -> Dict[str, Dict[str, Union[str, List[Union[str, datetime, int, float]]]]]:
-    """Filters the metadata so that it contains the data for the filenames in filered_files
-
-    Args:
-        metadata (dict): A dictionary containing the metadata for each satellite
-        Each satellite has the following key fields "filenames","epsg","dates","acc_georef"
-        Example:
-        metadata = {
-            'L8':{
-                "filenames": ["2019-02-16-18-22-17_L8_sitename_ms.tif","2012-02-16-18-22-17_L8_sitename_ms.tif"],
-                "epsg":[4326,4326],
-                "dates":[datetime.datetime(2022, 1, 26, 15, 33, 50, tzinfo=<UTC>),datetime.datetime(2012, 1, 26, 15, 33, 50, tzinfo=<UTC>)],
-                "acc_georef":[9.185,9.125],
-            }
-            'L9':{
-                "filenames": ["2019-02-16-18-22-17_L9_sitename_ms.tif"],
-                "epsg":[4326],
-                "dates":[datetime.datetime(2022, 1, 26, 15, 33, 50, tzinfo=<UTC>)],
-                "acc_georef":[9.185],
-            }
-        }
-        filtered_files (dict): A dictionary containing a set of the tif filenames available for each satellite
-        Example:
-        filtered_files = {
-            "L5": {},
-            "L7": {},
-            "L8": {"2019-02-16-18-22-17_L8_sitename_ms.tif"},
-            "L9": {"2019-02-16-18-22-17_L9_sitename_ms.tif"},
-            "S2": {},
-        }
-
-    Returns:
-        dict: a filtered dictionary containing only the data for the filenames in filtered_files
-        Example:
-                metadata = {
-            'L8':{
-                "filenames": ["2019-02-16-18-22-17_L8_sitename_ms.tif"],
-                "epsg":[4326],
-                "dates":[datetime.datetime(2022, 1, 26, 15, 33, 50, tzinfo=<UTC>)],
-                "acc_georef":[9.185],
-            }
-            'L9':{
-                "filenames": ["2019-02-16-18-22-17_L9_sitename_ms.tif"],
-                "epsg":[4326],
-                "dates":[datetime.datetime(2022, 1, 26, 15, 33, 50, tzinfo=<UTC>)],
-                "acc_georef":[9.185],
-            }
-        }
-    """
-    # Iterate over satellite names in filtered_files
-    for sat_name, files in filtered_files.items():
-        # Check if sat_name is present in metadata
-        if sat_name in metadata:
-            satellite_metadata = metadata[sat_name]
-
-            # Find the indices to keep based on filenames in filtered_files
-            indices_to_keep = [
-                idx
-                for idx, filename in enumerate(satellite_metadata["filenames"])
-                if filename in files
-            ]
-
-            # Loop through each key in the satellite_metadata dictionary
-            for key, values in satellite_metadata.items():
-                # Check if values is a list
-                if isinstance(values, list):
-                    if indices_to_keep:
-                        # If indices_to_keep is not empty, filter the list based on it
-                        satellite_metadata[key] = [values[i] for i in indices_to_keep]
-                    else:
-                        # If indices_to_keep is empty, assign an empty list
-                        satellite_metadata[key] = []
-    return metadata
-
-
-def get_filtered_files_dict(directory: str, file_type: str, sitename: str) -> dict:
-    """
-    Scans the directory for files of a given type and groups them by satellite names into a dictionary.
-    Each entry in the dictionary contains a set of multispectral tif filenames associated with the original filenames and site name.
-
-    Example :
-    file_type = "tif"
-    sitename = "ID_onn15_datetime06-07-23__01_02_19"
-    {
-        "L5":{2014-12-19-18-22-40_L5_ID_onn15_datetime06-07-23__01_02_19_ms.tif,},
-        "L7":{},
-        "L8":{2014-12-19-18-22-40_L8_ID_onn15_datetime06-07-23__01_02_19_ms.tif,},
-        "L9":{},
-        "S2":{},
-    }
-
-    Parameters:
-    -----------
-    directory : str
-        The directory where the files are located.
-
-    file_type : str
-        The filetype of the files to be included.
-        Ex. 'jpg'
-
-    sitename : str
-        The site name to be included in the new filename.
-
-    Returns:
-    --------
-    dict
-        a dictionary where each key is a satellite name and each value is a set of the tif filenames.
-    """
-    filepaths = glob.iglob(os.path.join(directory, f"*.{file_type}"))
-
-    satellites = {"L5": set(), "L7": set(), "L8": set(), "L9": set(), "S2": set()}
-    for filepath in filepaths:
-        filename = os.path.basename(filepath)
-        parts = filename.split("_")
-
-        if len(parts) < 2:
-            logging.warning(f"Skipping file with unexpected name format: {filename}")
-            continue
-
-        date = parts[0]
-
-        satname = find_satellite_in_filename(filename)
-        if satname is None:
-            logging.warning(
-                f"Skipping file with unexpected name format which was missing a satname: {filename}"
-            )
-            continue
-
-
-        tif_filename = f"{date}_{satname}_{sitename}_ms.tif"
-        if satname in satellites:
-            satellites[satname].add(tif_filename)
-
-    return satellites
 
 
 def create_unique_ids(data, prefix_length: int = 3):
