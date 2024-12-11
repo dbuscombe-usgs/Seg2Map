@@ -26,6 +26,7 @@ def find_satellite_in_filename(filename: str) -> str:
 
 
 def get_satellites_in_directory(directory_path: str) -> set:
+    """Get the set of satellite names for each folder in the directory path."""
     satellite_set = set()
 
     for filename in os.listdir(directory_path):

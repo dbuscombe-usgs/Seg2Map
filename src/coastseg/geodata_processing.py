@@ -100,7 +100,7 @@ def create_geofeature_geodataframe(
         # if a geofeature file is not given load features from ROI
         geofeature_gdf = load_geofeatures_from_roi(roi_gdf, feature_type)
 
-    logger.info(f"{feature_type}_gdf: {geofeature_gdf}")
+    logger.info(f"{feature_type}_gdf: length {len(geofeature_gdf)} sample {geofeature_gdf.head(1)}")
     if geofeature_gdf.empty:
         raise Exception(
             f"None of the {feature_type}s intersected the ROI. Try a different {feature_type}"
