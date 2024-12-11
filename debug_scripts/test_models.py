@@ -83,6 +83,7 @@ def test_model(img_types:list, available_models_dict:dict, input_directory:str):
                 "model_type": model_selected,
                 "otsu": False,
                 "tta": False,
+                "use_local_model": False,
             }
 
             zoo_model_instance = zoo_model.Zoo_Model()
@@ -106,13 +107,19 @@ available_models_dict = {
         "AK_segformer_RGB_4class_14037041", # AK segformer model
     ],
     "MNDWI": [
-        "segformer_MNDWI_4class_8213443",
+        "global_segformer_MNDWI_4class_14183366", # global segformer model
+        "AK_segformer_MNDWI_4class_14187478", # AK segformer model
     ],
     "NDWI": [
-        "segformer_NDWI_4class_8213427",
+      "global_segformer_NDWI_4class_14172182", # global segformer model
+      "AK_segformer_NDWI_4class_14183210", # AK segformer model
     ],
 }
 
+
+
 img_types = ["RGB", "MNDWI", "NDWI"]
+# img_types = [ "NDWI"]
+# img_types = [ "MNDWI"]
 
 test_model(img_types, available_models_dict, input_directory)
