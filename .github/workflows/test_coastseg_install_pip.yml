@@ -1,0 +1,43 @@
+on:
+  push:
+    branches: [test_actions]
+  pull_request:
+    branches: [test_actions]
+
+name: Test CoastSeg Pip Installation
+jobs:
+  Test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: "latest"
+          python-version: "3.10"
+          channels: conda-forge,defaults
+      - run: |
+          conda info
+          conda list
+      - name: Install coastseg with pip install -e .
+        run: |
+          pip install -e . --user
+      - name: Install dependencies
+        run: |
+          conda install -c conda-forge gdal -y
+          pip install tensorflow==2.12         
+      - name: Pip install pytest
+        run: |
+          pip install pytest
+      - name: Test with pytest
+        run: |
+          cd tests
+          python -m pytest
