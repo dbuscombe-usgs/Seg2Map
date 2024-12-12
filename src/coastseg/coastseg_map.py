@@ -264,6 +264,35 @@ class CoastSeg_Map:
             # Warning and information boxes that appear on top of the map
             self._init_info_boxes()
 
+    def print_features(self):  
+        """
+        Prints the number of each kind of feature currently loaded in the object.
+
+        This method checks for the presence of various geographic features (ROIs, shorelines, transects, bounding boxes, and shoreline extraction areas)
+        and prints the count of each feature type. If no features are loaded, it prints a message indicating that no features are loaded.
+
+        Attributes:
+            rois (GeoDataFrame): Regions of Interest (ROIs) with their respective IDs.
+            shoreline (GeoDataFrame): Shoreline data.
+            transects (GeoDataFrame): Transect data.
+            bbox (GeoDataFrame): Bounding box data.
+            shoreline_extraction_area (GeoDataFrame): Shoreline extraction area data.
+        """
+        # print the number of each kind of feature
+        if self.rois is not None:
+            print(f"Number of ROIs: {len(self.rois.gdf)}")
+            print(f"ROI IDs: {self.rois.gdf.id}")
+        if self.shoreline is not None:
+            print(f"Number of shorelines: {len(self.shoreline.gdf)}")
+        if self.transects is not None:
+            print(f"Number of transects: {len(self.transects.gdf)}")
+        if self.bbox is not None:
+            print(f"Number of bounding boxes: {len(self.bbox.gdf)}")
+        if self.shoreline_extraction_area is not None:
+            print(f"Number of shoreline extraction areas: {len(self.shoreline_extraction_area.gdf)}")
+        if self.rois is None and self.shoreline is None and self.transects is None and self.bbox is None and self.shoreline_extraction_area is None:
+            print("No features loaded")
+
     def get_map(self):
         if self.map is None:
             self.map = self.create_map()
@@ -703,6 +732,30 @@ class CoastSeg_Map:
             # add extracted shoreline and transect intersections to ROI they were extracted from
             self.rois.add_cross_shore_distances(cross_distances, roi_id)
 
+    def load_data_from_directory(self, dir_path: str,data_path:str="") -> None:
+        """
+        Clears the previous session and loads data from the specified directory.
+        This will load the config_gdf.geojson, config.json, shoreline_settings.json, and transects_settings.json files
+        Also loads the metadata for each ROI in the config_gdf.geojson file if it exists.
+
+        Args:
+            dir_path (str): The path to the directory containing the session data.
+            data_path (str, optional): The path to the specific data file within the directory. Defaults to an empty string.
+
+        Raises:
+            FileNotFoundError: If the specified directory does not exist.
+
+        Returns:
+            None
+        """
+        if not os.path.exists(dir_path):
+            raise FileNotFoundError(f"Session path {dir_path} does not exist")
+        # remove all the old features from the map
+        self.remove_all()
+        # only load data from the directory
+        self.load_session_files(dir_path,data_path)
+
+
     def load_fresh_session(self, session_path: str) -> None:
         """
         Load a fresh session by removing all the old features from the map and loading a new session.
@@ -740,25 +793,31 @@ class CoastSeg_Map:
             # get the index of the sessions directory which contains all the sessions
             if "data" in split_array:
                 return os.path.basename(session_path)
-            if "sessions" in split_array:
+            elif "sessions" in split_array:
                 parent_index = split_array.index("sessions")
+            else:
+                return ""
             # get the parent session name aka not a sub directory for a specific ROI
             parent_session_name = split_array[parent_index + 1]
             if not (
                 os.path.exists(os.sep.join(split_array[: parent_index + 1]))
                 and os.path.isdir(os.sep.join(split_array[: parent_index + 1]))
             ):
-                raise FileNotFoundError(f"{os.sep.join(split_array[:parent_index+1])}")
+                return ""
             return parent_session_name
 
         if not data_path:
             base_path = os.path.abspath(core_utilities.get_base_dir())
             data_path = file_utilities.create_directory(base_path, "data")
 
-        # load the session name
         session_path = os.path.abspath(session_path)
-
+        # load the session name
+        
         session_name = get_parent_session_name(session_path)
+        if session_name == "":
+            raise Exception(f"A session can only be loaded from the /sessions or /data directory. The {session_path} directory is not a valid session directory.")
+
+
         logger.info(f"session_name: {session_name} session_path: {session_path}")
         self.set_session_name(session_name)
         logger.info(f"Loading session from session directory: {session_path}")
