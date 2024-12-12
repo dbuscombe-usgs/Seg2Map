@@ -525,7 +525,7 @@ def get_url_dict_to_download(models_json_dict: dict) -> dict:
     and urls to download file
 
     ex.
-    {'C:\Home\Project\file.json':"https://website/file.json"}
+    {'C:\\Home\\Project\\file.json':"https://website/file.json"}
 
     Args:
         models_json_dict (dict): full path to files and links
@@ -609,7 +609,7 @@ class Zoo_Model:
             "implementation": "BEST",
             "model_type": "global_segformer_RGB_4class_14036903",
             "local_model_path": "", # local path to the directory containing the model
-            "use_local_model": True,  # Use local model (not one from zeneodo)
+            "use_local_model": False,  # Use local model (not one from zeneodo)
             "otsu": False,
             "tta": False,
             "cloud_thresh": 0.5,  # threshold on maximum cloud cover
@@ -694,6 +694,7 @@ class Zoo_Model:
                                          use_otsu:bool = False,
                                          percent_no_data:float = 50.0,
                                          use_GPU:str="0",
+                                         coregistered:bool = False,
                                          ):
         """
         Runs the model and extracts shorelines using the segmented imagery.
@@ -712,7 +713,8 @@ class Zoo_Model:
             use_otsu (bool, optional): Whether to use Otsu thresholding. Defaults to False.
             percent_no_data (float, optional): The percentage of no-data pixels in the input images. Defaults to 50.0.
             use_GPU (str, optional): The GPU device to use. Defaults to "0".
-        """
+            coregistered (bool, optional): Whether the input images are coregistered. Defaults to False.
+        """   
         settings = self.get_settings()
         model_name = settings.get('model_type', None)
         if model_name is None:
@@ -732,7 +734,7 @@ class Zoo_Model:
             desc=f"Running {model_name} model and extracting shorelines",
             leave=True,
         )
-        # run the model
+        # run the model # todo remove this comment
         self.run_model(
             img_type,
             model_implementation,
@@ -743,6 +745,7 @@ class Zoo_Model:
             use_otsu=use_otsu,
             use_tta=use_tta,
             percent_no_data=percent_no_data,
+            coregistered = coregistered,
         )
         prog_bar.update(1)
         prog_bar.set_description_str(
@@ -1102,6 +1105,7 @@ class Zoo_Model:
             use_otsu: bool,
             use_tta: bool,
             percent_no_data: float,
+            coregistered: bool = False,
         ):
             """
             Runs the model for image segmentation.
@@ -1115,7 +1119,8 @@ class Zoo_Model:
                 use_GPU (str): Whether to use GPU or not.
                 use_otsu (bool): Whether to use Otsu thresholding or not.
                 use_tta (bool): Whether to use test-time augmentation or not.
-                percent_no_data (float): The percentage of no data.
+                percent_no_data (float): The percentage of no data allowed in the image.
+                coregistered (bool, optional): Whether the images are coregistered or not. Defaults to False.
 
             Returns:
                 None
@@ -1152,6 +1157,10 @@ class Zoo_Model:
             roi_directory = file_utilities.find_parent_directory(
                 src_directory, "ID_", "data"
             )
+
+            if coregistered:
+                roi_directory = os.path.join(roi_directory, "coregistered")
+
 
             print(f"Preprocessing the data at {roi_directory}")
             model_dict = self.preprocess_data(roi_directory, model_dict, img_type)

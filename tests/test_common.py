@@ -1184,12 +1184,12 @@ def sample_ROI_directory(request):
     )
 
     filenames = [
-        "20210101_sat1_L5.jpg",
-        "20210101_sat1_L7.jpg",
-        "20210101_sat1_L8.jpg",
-        "20210101_sat1_L9.jpg",
-        "20210101_sat1_S2.jpg",
-        "20210101_wrong_name.jpg",
+        "2021-01-05-15-33-53_L5_site1_ms.jpg",
+        "2021-01-05-15-33-53_L7_site1_ms.jpg",
+        "2021-01-05-15-33-53_sat1_L8.jpg",
+        "2021-01-05-15-33-53_sat1_L9.jpg",
+        "2021-01-05-15-33-53_sat1_S2.jpg",
+        "2021-01-05-15-33-53_wrong_name.jpg",
         "wrong_name_2.jpg",
     ]
 
@@ -1244,9 +1244,11 @@ def expected_satellites():
 # Test data
 @pytest.fixture(scope="module")
 def sample_metadata():
+    # This metadata is total bogus and is just for testing purposes.
+    # The  only thing that matters is the date format for filesnames is in the format "YYYY-MM-DD-HH-MM-SS"
     metadata = {
         "L5": {
-            "filenames": ["20210101_L5_site1_ms.tif", "20220101_L5_site1_ms.tif"],
+            "filenames": ["2021-01-05-15-33-53_L5_site1_ms.tif", "2022-01-05-15-33-53_L5_site1_ms.tif"],
             "acc_georef": [9.185, 10.185],
             "epsg": [32618, 32618],
             "dates": [
@@ -1255,7 +1257,7 @@ def sample_metadata():
             ],
         },
         "L7": {
-            "filenames": ["20210101_L7_site1_ms.tif", "20220101_L7_site1_ms.tif"],
+            "filenames": ["2021-01-05-15-33-53_L7_site1_ms.tif", "2022-01-05-15-33-53_L7_site1_ms.tif"],
             "acc_georef": [7.441, 5.693],
             "epsg": [32618, 32618],
             "dates": [
@@ -1272,13 +1274,13 @@ def sample_metadata():
 def expected_filtered_metadata():
     metadata = {
         "L5": {
-            "filenames": ["20210101_L5_site1_ms.tif"],
+            "filenames": ["2021-01-05-15-33-53_L5_site1_ms.tif"],
             "acc_georef": [9.185],
             "epsg": [32618],
             "dates": ["datetime.datetime(2020, 1, 5, 15, 33, 53, tzinfo=<UTC>)"],
         },
         "L7": {
-            "filenames": ["20210101_L7_site1_ms.tif"],
+            "filenames": ["2021-01-05-15-33-53_L7_site1_ms.tif"],
             "acc_georef": [7.441],
             "epsg": [32618],
             "dates": [
@@ -1314,7 +1316,10 @@ def expected_empty_filtered_metadata():
 def test_filter_metadata(
     sample_ROI_directory, sample_metadata, expected_filtered_metadata
 ):
-    result = common.filter_metadata(sample_metadata, "site1", sample_ROI_directory)
+    directory =  os.path.join(
+                sample_ROI_directory, "site1", "jpg_files", "preprocessed", "RGB"
+            )
+    result = common.filter_metadata_with_dates(sample_metadata, directory, "jpg")
 
     assert (
         result == expected_filtered_metadata
@@ -1329,23 +1334,21 @@ def test_empty_roi_directory_filter_metadata(
     sample_directory,
 ):
     # if the RGB directory but exists and is empty then no filenames in result should be empty lists
-    result = common.filter_metadata(sample_metadata, "site1", empty_ROI_directory)
+    directory =  os.path.join(
+                empty_ROI_directory, "site1", "jpg_files", "preprocessed", "RGB"
+            )
+    result = common.filter_metadata_with_dates(sample_metadata, directory, "jpg")
+
     assert (
         result == expected_empty_filtered_metadata
     ), "The output filtered metadata is not as expected."
 
     # should raise an error if the RGB directory within the ROI directory does not exist
     with pytest.raises(Exception):
-        common.filter_metadata(sample_metadata, "site1", sample_directory)
-
-
-# Test cases
-def test_get_filtered_files_dict(sample_directory, expected_satellites):
-    result = common.get_filtered_files_dict(sample_directory, "jpg", "site1")
-
-    assert (
-        result == expected_satellites
-    ), "The output file name dictionary is not as expected."
+        directory =  os.path.join(
+                    sample_directory, "site1", "jpg_files", "preprocessed", "RGB"
+                )
+        result = common.filter_metadata_with_dates(sample_metadata, directory, "jpg")
 
 
 # Test for preprocessing function

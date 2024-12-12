@@ -83,6 +83,7 @@ def test_model(img_types:list, available_models_dict:dict, input_directory:str):
                 "model_type": model_selected,
                 "otsu": False,
                 "tta": False,
+                "use_local_model": False,
             }
 
             zoo_model_instance = zoo_model.Zoo_Model()

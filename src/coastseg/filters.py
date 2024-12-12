@@ -97,6 +97,10 @@ def get_time_vectors(files: list) -> tuple:
 def get_image_shapes(files: list) -> list:
     return [load_data(f).shape for f in files]
 
+# count number of files with the same shape
+def count_files_with_same_shape(files: list) -> dict:
+    file_shapes = get_image_shapes(files)
+    return {shape: file_shapes.count(shape) for shape in set(file_shapes)}
 
 def measure_rmse(da: xr.DataArray, times: list, timeav: xr.DataArray) -> tuple:
     """
@@ -195,6 +199,26 @@ def return_valid_files(files: list) -> list:
     modal_shape = mode(get_image_shapes(files))
     return [f for f in files if load_data(f).shape == modal_shape]
 
+def get_files_with_shape(files: list,shape:tuple) -> list:
+    """
+    Return files whose image shapes match the  shape among the given files.
+
+    Args:
+        files (list): List of file paths.
+
+    Returns:
+        list: File paths whose image shape matches the mode of all file shapes.
+    """
+    matching_files = []
+    for file in files:
+        if os.path.exists(file):
+            shape_file = load_data(file).shape
+            if shape_file == shape:
+                matching_files.append(file)
+    return matching_files
+    # return [f for f  in files if load_data(f).shape == shape]
+
+
 def apply_land_mask( directory_path: str) -> None:
     """
     Apply land mask to 'good' files and save them to the destination folder.
@@ -242,24 +266,30 @@ def filter_model_outputs(
         dest_folder_good (str): Destination folder for 'good' files.
         dest_folder_bad (str): Destination folder for 'bad' files.
     """
-    valid_files = return_valid_files(files)
-    if len(valid_files) <3:
-        # if there are not enough valid files to perform the analysis, move all files to the good folder
-        handle_files_and_directories(
-        [], valid_files, dest_folder_bad, dest_folder_good
-        ) 
-        return 
-    print(f"Found {len(valid_files)} valid files for {satname}.")
-    times, time_var = get_time_vectors(valid_files)
-    da = xr.concat([load_xarray_data(f) for f in valid_files], dim=time_var)
-    timeav = da.mean(dim="time")
 
-    rmse, input_rmse = measure_rmse(da, times, timeav)
-    labels, scores = get_kmeans_clusters(input_rmse, rmse)
-    files_bad, files_good = get_good_bad_files(valid_files, labels, scores)
-    handle_files_and_directories(
-        files_bad, files_good, dest_folder_bad, dest_folder_good
-    ) 
+    count_shapes = count_files_with_same_shape(files)
+    # get the most common shape
+    # modal_shape = mode(get_image_shapes(files))
+    for shape, count in count_shapes.items():
+        print(f"Shape: {shape} Count: {count}")
+        valid_files = get_files_with_shape(files,shape)
+        if len(valid_files) <3:
+            # if there are not enough valid files to perform the analysis, move all files to the good folder
+            handle_files_and_directories(
+            [], valid_files, dest_folder_bad, dest_folder_good
+            ) 
+        else:
+            times, time_var = get_time_vectors(valid_files)
+            da = xr.concat([load_xarray_data(f) for f in valid_files], dim=time_var)
+            timeav = da.mean(dim="time")
+
+            rmse, input_rmse = measure_rmse(da, times, timeav)
+            labels, scores = get_kmeans_clusters(input_rmse, rmse)
+            files_bad, files_good = get_good_bad_files(valid_files, labels, scores)
+            handle_files_and_directories(
+                files_bad, files_good, dest_folder_bad, dest_folder_good
+            ) 
+            # apply_land_mask(dest_folder_good)    
     
     
     

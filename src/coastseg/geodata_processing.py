@@ -100,7 +100,7 @@ def create_geofeature_geodataframe(
         # if a geofeature file is not given load features from ROI
         geofeature_gdf = load_geofeatures_from_roi(roi_gdf, feature_type)
 
-    logger.info(f"{feature_type}_gdf: {geofeature_gdf}")
+    logger.info(f"{feature_type}_gdf: length {len(geofeature_gdf)} sample {geofeature_gdf.head(1)}")
     if geofeature_gdf.empty:
         raise Exception(
             f"None of the {feature_type}s intersected the ROI. Try a different {feature_type}"
@@ -187,15 +187,18 @@ def load_geodataframe_from_file(
         ValueError: If the feature file is empty.
     """
     logger.info(f"Attempting to load {feature_type} from a file")
-    feature_gdf = read_gpd_file(feature_path)
+    original_feature_gdf = read_gpd_file(feature_path)
     try:
         # attempt to load features from a config file
         feature_gdf = extract_feature_from_geodataframe(
-            feature_gdf, feature_type=feature_type
+            original_feature_gdf, feature_type=feature_type
         )
     except ValueError as e:
         # if it isn't a config file then just ignore the error
         logger.info(f"This probably wasn't a config : {feature_path} \n {e}")
+        feature_gdf = original_feature_gdf # if this wasn't a config then just return the original file
+
+
     if feature_gdf.empty:
         raise ValueError(f"Empty {feature_type} file provided: {feature_path}")
     return feature_gdf
@@ -210,9 +213,15 @@ def load_feature_from_file(feature_path: str, feature_type: str):
 
 def create_feature(feature_type: str, gdf):
     feature_type = feature_type.lower()  # Convert to lower case for case insensitive comparison
-
     if feature_type in FEATURE_TYPE_MAP:
-        feature_object = FEATURE_TYPE_MAP[feature_type](gdf)
+        if "transect" in feature_type:
+            feature_object = FEATURE_TYPE_MAP[feature_type](transects=gdf)
+        elif "shoreline" in feature_type:
+            feature_object = FEATURE_TYPE_MAP[feature_type](shoreline=gdf)
+        elif "roi" in feature_type:
+            feature_object = FEATURE_TYPE_MAP[feature_type](rois_gdf=gdf)
+        else:
+            feature_object = FEATURE_TYPE_MAP[feature_type](gdf)
     else:
         raise ValueError(f"Unsupported feature_type: {feature_type}")
 
