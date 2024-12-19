@@ -219,41 +219,6 @@ def get_files_with_shape(files: list,shape:tuple) -> list:
     # return [f for f  in files if load_data(f).shape == shape]
 
 
-def apply_land_mask( directory_path: str) -> None:
-    """
-    Apply land mask to 'good' files and save them to the destination folder.
-
-    Args:
-        dest_folder_good (str): Destination folder for 'good' files
-    """
-    files_good = [os.path.join(directory_path, file) for file in os.listdir(directory_path)]
-    if len(files_good) == 0:
-        return directory_path
-    times, time_var = get_time_vectors(files_good)
-    # create xarray from good files
-    da = xr.concat([load_xarray_data(f) for f in files_good], dim=time_var)
-    # create time average of good files
-    timeav = da.mean(dim="time")
-    # create land mask from the time averaged image
-    mask_land = np.array(np.round(timeav)==3).astype('int')
-    # apply land mask to each time in the good files
-    for time in times:
-        # select the time
-        frame = da.sel(time=time).to_numpy()
-        frame[mask_land==1] = 3
-        da.sel(time=time).values = frame
-
-    # save the masked files to npz
-    for f in files_good:
-        dest_path = os.path.join(directory_path, os.path.basename(f))
-        if not os.path.exists(os.path.dirname(dest_path)):
-            os.makedirs(os.path.dirname(dest_path),exist_ok=True)
-        np.savez_compressed(dest_path, grey_label=da.sel(time=time).to_numpy())
-        
-    return directory_path
-
-
-
 def filter_model_outputs(
     satname: str, files: list, dest_folder_good: str, dest_folder_bad: str
 ) -> None:
@@ -289,7 +254,7 @@ def filter_model_outputs(
             handle_files_and_directories(
                 files_bad, files_good, dest_folder_bad, dest_folder_good
             ) 
-            # apply_land_mask(dest_folder_good)    
+
     
     
     
