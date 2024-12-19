@@ -325,8 +325,8 @@ def find_parent_directory(
                               continue until the top-level directory is reached.
 
     Returns:
-        str or None: The path to the parent directory containing the directory with
-                     the specified name, or None if the directory is not found.
+        str : The path to the parent directory containing the directory with
+                     the specified name, or "" if the directory is not found.
     """
     while True:
         # check if the current directory name contains the target directory name
@@ -341,7 +341,7 @@ def find_parent_directory(
             print(
                 f"Reached top-level directory without finding '{directory_name}':", path
             )
-            return None
+            return ""
 
         # update the path to the parent directory and continue the loop
         path = parent_dir

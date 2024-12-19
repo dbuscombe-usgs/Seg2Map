@@ -11,6 +11,31 @@ from coastseg import file_utilities
 
 # Some of these functions were originally written by Mark Lundine and have been modified for this project.
 
+def filter_segmentations(
+    session_path: str,
+    threshold: float = 0.40,
+) -> str:
+    """
+    Sort model output files into "good" and "bad" folders based on the satellite name in the filename.
+    Applies the land mask to the model output files in the "good" folder.
+
+    Args:
+        session_path (str): The path to the session directory containing the model output files.
+
+    Returns:
+        str: The path to the "good" folder containing the sorted model output files.
+    """
+    segmentation_classifier = get_segmentation_classifier()
+    good_path = os.path.join(session_path, "good")
+    csv_path,good_path,bad_path = run_inference_segmentation_classifier(segmentation_classifier,
+                    session_path,
+                    session_path,
+                    good_path=good_path,
+                    threshold=threshold)
+    # if the good folder does not exist then this means the classifier could not find any png files at the session path and something went wrong
+    if not os.path.exists(good_path):
+        raise FileNotFoundError(f"No model output files found at {session_path}. Shoreline Filtering failed.")
+    return good_path
 
 def move_matching_files(input_image_path, search_string, file_exts, target_dir):
     """

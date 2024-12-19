@@ -48,6 +48,19 @@ import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
+def move_model_outputs_to_directory(input_directory: str, output_directory: str,preprocessed_data:dict) -> None:
+    """Copies the model outputs ( png + npz files) from the input directory to the output directory. Saves the model settings to the output directory."""
+    if not os.path.exists(input_directory):
+        logger.warning(f"No model outputs were generated")
+        print(f"No model outputs were generated")
+        raise Exception(f"No model outputs were generated. Check if the directory contained enough data to run the model or try raising the percentage of no data allowed.")
+
+    model_settings_path = os.path.join(output_directory, "model_settings.json")
+    file_utilities.write_to_json(model_settings_path, preprocessed_data)
+
+    # copy files from out to session folder
+    file_utilities.move_files(input_directory, output_directory, delete_src=True)   
+
 
 def filter_no_data_pixels(files: list[str], percent_no_data: float = 0.50) -> list[str]:
     def percentage_of_black_pixels(img: "PIL.Image") -> float:
@@ -166,10 +179,14 @@ def get_imagery_directory(img_type: str, RGB_path: str) -> str:
     output_path = os.path.dirname(RGB_path)
     if img_type == "RGB":
         output_path = RGB_path
-    elif img_type == "RGB+MNDWI+NDWI":
+    elif img_type == "RGB+MNDWI+NDWI": # this is for 5 band imagery
         NIR_path = os.path.join(output_path, "NIR")
+        if not os.path.exists(NIR_path):
+            raise FileNotFoundError(f"{NIR_path} not found at {output_path}")
         NDWI_path = RGB_to_infrared(RGB_path, NIR_path, output_path, "NDWI")
         SWIR_path = os.path.join(output_path, "SWIR")
+        if not os.path.exists(SWIR_path):
+            raise FileNotFoundError(f"{SWIR_path} not found at {output_path}")
         MNDWI_path = RGB_to_infrared(RGB_path, SWIR_path, output_path, "MNDWI")
         five_band_path = file_utilities.create_directory(output_path, "five_band")
         output_path = get_five_band_imagery(
@@ -178,9 +195,13 @@ def get_imagery_directory(img_type: str, RGB_path: str) -> str:
     # default filetype is NIR and if NDWI is selected else filetype to SWIR
     elif img_type == "NDWI":
         NIR_path = os.path.join(output_path, "NIR")
+        if not os.path.exists(NIR_path):
+            raise FileNotFoundError(f"{NIR_path} not found at {output_path}")
         output_path = RGB_to_infrared(RGB_path, NIR_path, output_path, "NDWI")
     elif img_type == "MNDWI":
         SWIR_path = os.path.join(output_path, "SWIR")
+        if not os.path.exists(SWIR_path):
+            raise FileNotFoundError(f"{SWIR_path} not found at {output_path}")
         output_path = RGB_to_infrared(RGB_path, SWIR_path, output_path, "MNDWI")
     else:
         raise ValueError(
@@ -670,17 +691,9 @@ class Zoo_Model:
         Returns:
             dict: The updated model dictionary containing the paths to the processed data.
         """
-        # if configs do not exist then raise an error and do not save the session
-        if not file_utilities.validate_config_files_exist(src_directory):
-            logger.warning(
-                f"Config files config.json or config_gdf.geojson do not exist in roi directory { src_directory}\n This means that the download did not complete successfully."
-            )
-            raise FileNotFoundError(
-                f"Config files config.json or config_gdf.geojson do not exist in roi directory { src_directory}\n This means that the download did not complete successfully."
-            )
         # get full path to directory named 'RGB' containing RGBs
         RGB_path = file_utilities.find_directory_recursively(src_directory, name="RGB")
-        # convert RGB to MNDWI, NDWI,or 5 band
+        # create a new directory called "MNDWI","NDWI" or 5_band using the RGB directory depending on the img_type
         model_dict["sample_direc"] = get_imagery_directory(img_type, RGB_path)
         return model_dict
 
@@ -958,12 +971,9 @@ class Zoo_Model:
         """
         # get roi_ids
         session_path = session.path
+        # The "out" directory is by default where the model outputs are saved
         outputs_path = os.path.join(preprocessed_data["sample_direc"], "out")
-        if not os.path.exists(outputs_path):
-            logger.warning(f"No model outputs were generated")
-            print(f"No model outputs were generated")
-            raise Exception(f"No model outputs were generated. Check if {roi_directory} contained enough data to run the model or try raising the percentage of no data allowed.")
-        logger.info(f"Moving from {outputs_path} files to {session_path}")
+        move_model_outputs_to_directory(outputs_path, session_path,preprocessed_data)
 
         # if configs do not exist then raise an error and do not save the session
         if not file_utilities.validate_config_files_exist(roi_directory):
@@ -980,7 +990,7 @@ class Zoo_Model:
             roi_id,
             os.path.join(session_path, "config.json"),
         )
-        # Copy over the config_gdf.geojson file
+        # Copy over the config_gdf.geojson file to the session directory
         config_gdf_path = os.path.join(roi_directory, "config_gdf.geojson")
         if os.path.exists(config_gdf_path):
             # Read in the GeoJSON file using geopandas
@@ -993,11 +1003,6 @@ class Zoo_Model:
             gdf_4326.to_file(
                 os.path.join(session_path, "config_gdf.geojson"), driver="GeoJSON"
             )
-        model_settings_path = os.path.join(session_path, "model_settings.json")
-        file_utilities.write_to_json(model_settings_path, preprocessed_data)
-
-        # copy files from out to session folder
-        file_utilities.move_files(outputs_path, session_path, delete_src=True)
         session.save(session.path)
 
     def get_weights_directory(self,model_implementation:str, model_id: str) -> str:
@@ -1025,6 +1030,8 @@ class Zoo_Model:
         # check if a local model should be loaded or not
         if USE_LOCAL_MODEL == False or LOCAL_MODEL_PATH == "":
             # create the model directory & download the model
+            if not model_id:
+                raise ValueError("Please select a model.")
             weights_directory = self.get_model_directory(model_id)
             self.download_model(model_implementation, model_id, weights_directory)
         else:
@@ -1106,6 +1113,7 @@ class Zoo_Model:
             use_tta: bool,
             percent_no_data: float,
             coregistered: bool = False,
+            roi_directory:str =""
         ):
             """
             Runs the model for image segmentation.
@@ -1121,7 +1129,7 @@ class Zoo_Model:
                 use_tta (bool): Whether to use test-time augmentation or not.
                 percent_no_data (float): The percentage of no data allowed in the image.
                 coregistered (bool, optional): Whether the images are coregistered or not. Defaults to False.
-
+                roi_directory (str, optional): The directory containing the ROI data. Defaults to "".
             Returns:
                 None
             """
@@ -1153,10 +1161,16 @@ class Zoo_Model:
                 "tta": use_tta,
                 "percent_no_data": percent_no_data,
             }
-            # get parent roi_directory from the selected imagery directory
-            roi_directory = file_utilities.find_parent_directory(
-                src_directory, "ID_", "data"
-            )
+            # If the ROI directory is not provided, check the parent folders of the provided imagery directory until either the ROI directory is found or the data directory is reached
+            if not roi_directory:
+                # get parent (aka the ROI directory that contains jpg_files and satellite directories) from the selected imagery directory
+                roi_directory = file_utilities.find_parent_directory(
+                    src_directory, "ID_", "data"
+                )
+                if not roi_directory:
+                    raise FileNotFoundError(
+                        f"Could not find the ROI directory that contained 'ID' in the name in {src_directory}"
+                    )
 
             if coregistered:
                 roi_directory = os.path.join(roi_directory, "coregistered")
@@ -1170,6 +1184,70 @@ class Zoo_Model:
             self.postprocess_data(model_dict, session, roi_directory)
             session.add_roi_ids([file_utilities.extract_roi_id(roi_directory)])
             print(f"\n Model results saved to {session.path}")
+
+    def run_model_on_directory(
+            self,
+            output_directory:str,
+            src_directory: str,
+            model_name: str,
+            img_type: str="RGB",
+            model_implementation: str = "BEST",
+            use_GPU: str="0",
+            use_otsu: bool=False,
+            use_tta: bool = False,
+            percent_no_data: float =0.90,
+            coregistered: bool = False,
+        ):
+            """
+            Runs the model for image segmentation.
+
+            Args:
+                img_type (str): The type of image.
+                model_implementation (str): The implementation of the model. BEST or ENSEMBLE
+                output_directory (str): The directory to save the model outputs.
+                src_directory (str): The directory of RGB images.
+                model_name (str): The name of the model.
+                use_GPU (str): Whether to use GPU or not.
+                use_otsu (bool): Whether to use Otsu thresholding or not.
+                use_tta (bool): Whether to use test-time augmentation or not.
+                percent_no_data (float): The percentage of no data allowed in the image. Defaults to 0.90.
+                coregistered (bool, optional): Whether the images are coregistered or not. Defaults to False.
+                roi_directory (str, optional): The directory containing the ROI data. Defaults to "".
+            Returns:
+                None
+            """
+            logger.info(f"Selected directory of RGBs: {src_directory}")
+            logger.info(f"model_name: {model_name}")
+            logger.info(f"model_implementation: {model_implementation}")
+            logger.info(f"use_GPU: {use_GPU}")
+            logger.info(f"use_otsu: {use_otsu}")
+            logger.info(f"use_tta: {use_tta}")
+
+            print(f"Running model {model_name}")
+            # print(f"self.settings: {self.settings}")
+            self.prepare_model(model_implementation, model_name)
+
+            model_dict = {
+                "use_GPU": use_GPU,
+                "sample_direc": "",
+                "implementation": model_implementation,
+                "model_type": model_name,
+                "otsu": use_otsu,
+                "tta": use_tta,
+                "percent_no_data": percent_no_data,
+            }
+
+            # add back coregistered ??
+
+            model_dict = self.preprocess_data(src_directory, model_dict, img_type)
+            logger.info(f"model_dict: {model_dict}")
+
+            self.compute_segmentation(model_dict, percent_no_data)
+
+            # The "out" directory is by default where the model outputs are saved
+            model_outputs_path = os.path.join(model_dict["sample_direc"], "out")
+            move_model_outputs_to_directory(model_outputs_path, output_directory,model_dict)
+            print(f"\n Model results saved to {output_directory}")
 
     def get_model_directory(self, model_id: str):
         # Create a directory to hold the downloaded models
