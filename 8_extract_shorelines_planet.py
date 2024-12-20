@@ -53,7 +53,7 @@ percent_no_data = 0.75
 
 # This script assumes the site directory is in the format of the above structure and is provided
 session_dir = r'C:\development\coastseg-planet\downloads\UNALAKLEET_pier_cloud_0.7_TOAR_enabled_2020-06-01_to_2023-08-01\e2821741-0677-435a-a93a-d4f060f3adf4\coregistered'
-
+good_dir = r'C:\development\coastseg-planet\downloads\UNALAKLEET_pier_cloud_0.7_TOAR_enabled_2020-06-01_to_2023-08-01\e2821741-0677-435a-a93a-d4f060f3adf4\coregistered\segmentations\good'
 # Make a simpler version of run model that doesn't need config
 
 # Make a simpler version of extract shorelines that doesn't need config
@@ -77,84 +77,3 @@ zoo_model_instance.run_model_on_directory(output_directory, RGB_directory,model_
 
 # Now run the segmentation classifier on the output directory
 classifier.filter_segmentations(output_directory,threshold=0.50)
-
-# Extract shorelines from directory
-satellite = 'PS' # planet
-meta_dir = os.path.join(session_dir, satellite, 'meta')
-ms_dir = os.path.join(session_dir, satellite, 'ms')
-udm2_dir = os.path.join(session_dir, satellite, 'udm2')
-filepath =  [ms_dir,udm2_dir] # get the directories of the ms and udm2 files
-
-pixel_size = 3.0 # meters For PlanetScope
-
-# get the minimum beach area in number of pixels depending on the satellite
-settings["min_length_sl"] 
-
-# whatever file is currently being processed
-filename =''
-
-# get date
-date = filename[:19]
-
-# get filepath of ms and udm2 of this particular filenmae
-fn = [os.path.join(ms_dir, filename), os.path.join(udm2_dir, filename)]
-
-
-# basically this function should do what preprocess_single does
-
-# filepaths to .tif files
-fn_ms = fn[0]
-fn_mask = fn[1]
-
-im_ms, georef = raster_utils.read_ms_planet(fn_ms)
-cloud_mask = raster_utils.read_cloud_mask_planet(fn_mask)
-im_nodata = raster_utils.read_nodata_mask_planet(fn_mask)
-combined_mask = np.logical_or(cloud_mask, im_nodata)
-
-# Note may need to add code to add 0 pixels to the no data mask later
-
-# Only do this is apply_cloud_mask is True
-cloud_mask = np.logical_or(cloud_mask, im_nodata)
-
-# Here is where we would get rid of the image if cloud cover or no data was above a certain threshold
-
-# this is the next step in the process find the shorelines
-    # ref_shoreline_buffer = SDS_shoreline.create_shoreline_buffer(
-    #     cloud_mask.shape, georef, image_epsg, pixel_size, settings
-    # )
-    # # read the model outputs from the npz file for this image
-    # npz_file = find_matching_npz(filename, os.path.join(session_path, "good"))
-    # if npz_file is None:
-    #     npz_file = find_matching_npz(filename, session_path)
-    # if npz_file is None:
-    #     logger.warning(f"npz file not found for {filename}")
-    #     return None
-
-    # # get the labels for water and land
-    # land_mask = load_merged_image_labels(npz_file, class_indices=class_indices)
-    # all_labels = load_image_labels(npz_file)
-
-    # min_beach_area = settings["min_beach_area"]
-    # land_mask = remove_small_objects_and_binarize(land_mask, min_beach_area)
-
-    # # get the shoreline from the image
-    # shoreline = find_shoreline(
-    #     fn,
-    #     image_epsg,
-    #     settings,
-    #     np.logical_xor(cloud_mask, im_nodata),
-    #     cloud_mask,
-    #     im_nodata,
-    #     georef,
-    #     land_mask,
-    #     ref_shoreline_buffer,
-    # )
-
-# zoo_model_instance.run_model_and_extract_shorelines(
-#             model_setting["sample_direc"],
-#             session_name=model_session_name,
-#             shoreline_path=shoreline_path,
-#             transects_path=transects_path,
-#             shoreline_extraction_area_path = shoreline_extraction_area_path,
-#             coregistered=True,
-#         )
