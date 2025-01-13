@@ -35,6 +35,7 @@ from shapely.geometry import MultiPoint, LineString
 
 # coastsat imports
 from coastsat import SDS_preprocess, SDS_shoreline, SDS_tools
+from coastsat.SDS_download import release_logger, setup_logger
 from coastseg import geodata_processing
 from coastseg import file_utilities
 import matplotlib.lines as mlines
@@ -43,7 +44,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import skimage.measure as measure
-import skimage.morphology as morphology
 
 from coastsat.SDS_download import get_metadata
 # from coastsat.SDS_shoreline import extract_shorelines
@@ -63,6 +63,11 @@ from matplotlib.pyplot import get_cmap
 from skimage import measure, morphology
 from tqdm.auto import tqdm
 
+# ML related imports
+import sklearn
+import joblib
+import traceback
+
 # Internal dependencies imports
 from coastseg import common, exceptions
 
@@ -72,6 +77,341 @@ pd.set_option("mode.chained_assignment", None)
 # Logger setup
 logger = logging.getLogger(__name__)
 __all__ = ["Extracted_Shoreline"]
+
+def load_coastsat_models_path():
+    """Load the coastsat classification models from the coastsat package"""
+    # Import the specific module where the models are stored within coastsat
+    from coastsat.classification import models
+
+    try:
+        # Python 3.9 and newer: use importlib.resources to access package resources
+        import importlib.resources as pkg_resources
+
+        # Get the absolute path to the resources within the models module of coastsat
+        filepath_models = os.path.abspath(pkg_resources.files(models))
+    except ImportError:
+        # Fallback for Python versions below 3.9, use importlib_resources
+        import importlib_resources as pkg_resources
+
+        # Get the absolute path to the resources within the models module of coastsat
+        filepath_models = os.path.abspath(pkg_resources.files(models))
+    
+    return filepath_models
+
+def extract_contours(im_ms,cloud_mask,im_ref_buffer,im_labels,contours_method):
+    if contours_method == 'find_wl_contours1':
+        logger.info("Using find_wl_contours1 method to extract shorelines")
+        # compute MNDWI image (SWIR-G)
+        im_mndwi = SDS_tools.nd_index(
+            im_ms[:, :, 4], im_ms[:, :, 1], cloud_mask
+        )
+        # find water contours on MNDWI grayscale image
+        contours_mwi, t_mndwi = SDS_shoreline.find_wl_contours1(
+            im_mndwi, cloud_mask, im_ref_buffer
+        )
+    elif contours_method == 'find_wl_contours2':
+        logger.info("Using find_wl_contours2 method to extract shorelines")
+        # use classification to refine threshold and extract the sand/water interface
+        contours_mwi, t_mndwi = SDS_shoreline.find_wl_contours2(
+            im_ms, im_labels, cloud_mask, im_ref_buffer
+        )
+    else:
+        raise ValueError(f"Unknown contours_method: {contours_method}")
+    return contours_mwi,t_mndwi
+
+def extract_shorelines_coastsat(metadata, settings, output_directory, shoreline_extraction_area):
+    filepath_models = load_coastsat_models_path()
+
+    sitename = settings["inputs"]["sitename"]
+    filepath_data = settings["inputs"]["filepath"]
+    collection = settings["inputs"]["landsat_collection"]
+
+    sitename_location = os.path.join(filepath_data, sitename)
+    # set up logger at the output directory if it is provided otherwise set up logger at the sitename location
+    if output_directory is not None:
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+        logger = setup_logger(
+            output_directory,
+            "extract_shorelines_report",
+            log_format="%(levelname)s - %(message)s",
+        )
+    else:
+        logger = setup_logger(
+        sitename_location,
+        "extract_shorelines_report",
+        log_format="%(levelname)s - %(message)s",
+    )
+        
+    logger.info(f"Please read the following information carefully:\n")
+    logger.info(
+        "find_wl_contours2: A method for extracting shorelines that uses the sand water interface detected with the model to refine the threshold that's used to detect shorelines .\n  - This is the default method used when there are enough sand pixels within the reference shoreline buffer.\n"
+    )
+    logger.info(
+        "find_wl_contours1: This shoreline extraction method uses a threshold to differentiate between water and land pixels in images, relying on Modified Normalized Difference Water Index (MNDWI) values. However, it may inaccurately classify snow and ice as water, posing a limitation in certain environments.\n  - This is only used when not enough sand pixels are detected within the reference shoreline buffer.\n"
+    )
+    logger.info(
+        "---------------------------------------------------------------------------------------------------------------------"
+    )
+    # initialise output structure
+    output = dict([])
+    # create a subfolder to store the .jpg images showing the detection
+    filepath_jpg = os.path.join(filepath_data, sitename, "jpg_files", "detection")
+    if not os.path.exists(filepath_jpg):
+        os.makedirs(filepath_jpg)
+    # close all open figures
+    plt.close("all")
+    output_epsg = settings["output_epsg"]
+    default_min_length_sl = settings["min_length_sl"]
+    # loop through satellite list
+    for satname in metadata.keys():
+        # get images
+        filepath = SDS_tools.get_filepath(settings["inputs"], satname)
+        filenames = metadata[satname]["filenames"]
+
+        # initialise the output variables
+        output_timestamp = []  # datetime at which the image was acquired (UTC time)
+        output_shoreline = []  # vector of shoreline points
+        output_filename = (
+            []
+        )  # filename of the images from which the shorelines where derived
+        output_cloudcover = []  # cloud cover of the images
+        output_geoaccuracy = []  # georeferencing accuracy of the images
+        output_idxkeep = (
+            []
+        )  # index that were kept during the analysis (cloudy images are skipped)
+        output_t_mndwi = []  # MNDWI threshold used to map the shoreline
+
+        # load classifiers (if sklearn version above 0.20, learn the new files)
+        str_new = ""
+        if not sklearn.__version__[:4] == "0.20":
+            str_new = "_new"
+        if satname in ["L5", "L7", "L8", "L9"]:
+            pixel_size = 15
+            if settings["sand_color"] == "dark":
+                clf = joblib.load(
+                    os.path.join(
+                        filepath_models, "NN_4classes_Landsat_dark%s.pkl" % str_new
+                    )
+                )
+            elif settings["sand_color"] == "bright":
+                clf = joblib.load(
+                    os.path.join(
+                        filepath_models, "NN_4classes_Landsat_bright%s.pkl" % str_new
+                    )
+                )
+            elif settings["sand_color"] == "default":
+                clf = joblib.load(
+                    os.path.join(filepath_models, "NN_4classes_Landsat%s.pkl" % str_new)
+                )
+            elif settings["sand_color"] == "latest":
+                clf = joblib.load(
+                    os.path.join(
+                        filepath_models, "NN_4classes_Landsat_latest%s.pkl" % str_new
+                    )
+                )
+        elif satname == "S2":
+            pixel_size = 10
+            clf = joblib.load(
+                os.path.join(filepath_models, "NN_4classes_S2%s.pkl" % str_new)
+            )
+
+        # convert settings['min_beach_area'] from metres to pixels
+        min_beach_area_pixels = np.ceil(settings["min_beach_area"] / pixel_size**2)
+
+        # reduce min shoreline length for L7 because of the diagonal bands
+        if satname == "L7":
+            settings["min_length_sl"] = 200
+        else:
+            settings["min_length_sl"] = default_min_length_sl
+
+        if satname == "L7":
+            logger.info(
+                f"WARNING: CoastSat has hard-coded the value for the minimum shoreline length for L7 to 200\n\n"
+            )
+        logger.info(
+            f"Extracting shorelines for {satname} Minimum Shoreline Length: {settings['min_length_sl']}\n\n"
+        )
+
+        # loop through the images
+        for i in tqdm(
+            range(len(filenames)), desc=f"{satname}: Mapping Shorelines", leave=True, position=0
+        ):
+            apply_cloud_mask = settings.get("apply_cloud_mask", True)
+            # get image filename
+            fn = SDS_tools.get_filenames(filenames[i], filepath, satname)
+            shoreline_date = os.path.basename(fn[0])[:19]
+
+            # preprocess image (cloud mask + pansharpening/downsampling)
+            (
+                im_ms,
+                georef,
+                cloud_mask,
+                im_extra,
+                im_QA,
+                im_nodata,
+            ) = SDS_preprocess.preprocess_single(
+                fn,
+                satname,
+                settings["cloud_mask_issue"],
+                settings["pan_off"],
+                collection,
+                apply_cloud_mask,
+                settings.get("s2cloudless_prob",60),
+            )
+            # get image spatial reference system (epsg code) from metadata dict
+            image_epsg = metadata[satname]["epsg"][i]
+
+            # compute cloud_cover percentage (with no data pixels)
+            cloud_cover_combined = np.sum(cloud_mask) / cloud_mask.size
+
+            if cloud_cover_combined > 0.99:  # if 99% of cloudy pixels in image skip
+                logger.error(
+                    f"Skipping {satname} {shoreline_date} due to cloud & no data pixels exceeding the maximum percentage allowed: {cloud_cover_combined:.2%} > 99%\n\n"
+                )
+                continue
+
+            # remove no data pixels from the cloud mask
+            # (for example L7 bands of no data should not be accounted for)
+
+            cloud_mask_adv = np.logical_xor(cloud_mask, im_nodata)
+
+            # compute updated cloud cover percentage (without no data pixels)
+            valid_pixels = np.sum(~im_nodata)
+            cloud_cover = np.sum(cloud_mask_adv.astype(int)) / valid_pixels.astype(int)
+            # skip image if cloud cover is above user-defined threshold
+            if cloud_cover > settings["cloud_thresh"]:
+                logger.error(
+                    f"Skipping {satname} {shoreline_date} due to cloud cover percentage exceeding cloud threshold: {cloud_cover:.2%} > {settings['cloud_thresh']:.2%}.\n\n"
+                )
+                continue
+            else:
+                logger.info(f"\nProcessing image {satname} {shoreline_date}")
+
+            logger.info(f"{satname} {shoreline_date} cloud cover : {cloud_cover:.2%}")
+
+            # calculate a buffer around the reference shoreline (if any has been digitised)
+            im_ref_buffer = SDS_shoreline.create_shoreline_buffer(
+                cloud_mask.shape, georef, image_epsg, pixel_size, settings
+            )
+
+            # classify image in 4 classes (sand, whitewater, water, other) with NN classifier
+            im_classif, im_labels = SDS_shoreline.classify_image_NN(
+                im_ms, cloud_mask, min_beach_area_pixels, clf
+            )
+            # sand, whitewater, water, other
+            class_mapping = {
+                0: "sand",
+                1: "whitewater",
+                2: "water",
+            }
+
+            logger.info(
+                f"{satname} {shoreline_date}: "
+                + f" ,".join(
+                    f"{class_name}: {np.sum(im_labels[:, :, index])/im_labels[:, :, index].size:.2%}"
+                    for index, class_name in class_mapping.items()
+                )
+            )
+
+            # log the amount of sand and water pixels in the reference shoreline buffer
+
+            # otherwise map the contours automatically with one of the two following functions:
+            # if there are pixels in the 'sand' class --> use find_wl_contours2 (enhanced)
+            # otherwise use find_wl_contours1 (traditional)
+            try:  # use try/except structure for long runs
+                contours_mwi,t_mndwi = extract_contours(im_ms,cloud_mask,im_ref_buffer,im_labels,settings.get("contours_method","find_wl_contours2"))
+            except Exception as e:
+                print(
+                    f"{satname} {shoreline_date}: Could not map shoreline due to error {str(e)}"
+                )
+                logger.error(
+                    f"{satname} {shoreline_date}: Could not map shoreline due to error {e}\n{traceback.format_exc()}"
+                )
+                continue
+
+            # process the water contours into a shoreline (shorelines are in the epsg of the image)
+            shoreline = SDS_shoreline.process_shoreline(
+                contours_mwi,
+                cloud_mask_adv,
+                im_nodata,
+                georef,
+                image_epsg,
+                settings,
+                logger=logger,
+            )
+            
+            # convert the polygon coordinates of ROI to gdf
+            height,width=im_ms.shape[:2]
+            output_epsg = settings["output_epsg"]
+            date = filenames[i][:19]
+            roi_gdf = SDS_preprocess.create_gdf_from_image_extent(height,width, georef,image_epsg,output_epsg)
+            
+            # filter shorelines within the extraction area
+            shoreline = SDS_shoreline.filter_shoreline( shoreline,shoreline_extraction_area,output_epsg)
+            shoreline_extraction_area_array = SDS_shoreline.get_extract_shoreline_extraction_area_array(shoreline_extraction_area, output_epsg, roi_gdf)
+            
+            # visualize the mapped shorelines, there are two options:
+            # if settings['check_detection'] = True, shows the detection to the user for accept/reject
+            # if settings['save_figure'] = True, saves a figure for each mapped shoreline
+            if settings["check_detection"] or settings["save_figure"]:
+                date = filenames[i][:19]
+                if not settings["check_detection"]:
+                    plt.ioff()  # turning interactive plotting off 
+                skip_image = SDS_shoreline.show_detection(
+                    im_ms,
+                    cloud_mask,
+                    im_labels,
+                    shoreline,
+                    image_epsg,
+                    georef,
+                    settings,
+                    date,
+                    satname,
+                    im_ref_buffer,
+                    output_directory,
+                    shoreline_extraction_area_array,
+                )
+                # if the user decides to skip the image, continue and do not save the mapped shoreline
+                if skip_image:
+                    continue
+
+            # append to output variables
+            output_timestamp.append(metadata[satname]["dates"][i])
+            output_shoreline.append(shoreline)
+            output_filename.append(filenames[i])
+            output_cloudcover.append(cloud_cover)
+            output_geoaccuracy.append(metadata[satname]["acc_georef"][i])
+            output_idxkeep.append(i)
+            output_t_mndwi.append(t_mndwi)
+
+        # create dictionnary of output
+        output[satname] = {
+            "dates": output_timestamp,
+            "shorelines": output_shoreline,
+            "filename": output_filename,
+            "cloud_cover": output_cloudcover,
+            "geoaccuracy": output_geoaccuracy,
+            "idx": output_idxkeep,
+            "MNDWI_threshold": output_t_mndwi,
+        }
+
+    # close figure window if still open
+    if plt.get_fignums():
+        plt.close()
+
+    # change the format to have one list sorted by date with all the shorelines (easier to use)
+    output = SDS_tools.merge_output(output)
+
+    filepath = os.path.join(filepath_data, sitename)
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    json_path = os.path.join(filepath, sitename + "_output.json")
+    SDS_preprocess.write_to_json(json_path, output)
+    # release the logger as it is no longer needed
+    release_logger(logger)
+
+    return output
 
 
 def time_func(func):
@@ -2080,6 +2420,8 @@ class Extracted_Shoreline:
         self.shoreline_settings = self.create_shoreline_settings(
             settings, roi_settings, reference_shoreline
         )
+
+
         # gets metadata used to extract shorelines
         metadata = get_metadata(self.shoreline_settings["inputs"])
         sitename = self.shoreline_settings["inputs"]["sitename"]
@@ -2122,7 +2464,8 @@ class Extracted_Shoreline:
                 )
 
         # extract shorelines with coastsat's models
-        extracted_shorelines = SDS_shoreline.extract_shorelines(metadata, self.shoreline_settings,output_directory=output_directory, shoreline_extraction_area=shoreline_extraction_area)
+        # extracted_shorelines = SDS_shoreline.extract_shorelines(metadata, self.shoreline_settings,output_directory=output_directory, shoreline_extraction_area=shoreline_extraction_area)
+        extracted_shorelines = extract_shorelines_coastsat(metadata, self.shoreline_settings,output_directory=output_directory, shoreline_extraction_area=shoreline_extraction_area)
         logger.info(f"extracted_shoreline_dict: {extracted_shorelines}")
         # postprocessing by removing duplicates and removing in inaccurate georeferencing (set threshold to 10 m)
         extracted_shorelines = remove_duplicates(
@@ -2145,7 +2488,7 @@ class Extracted_Shoreline:
         Args:
             settings (dict): settings used to control how shorelines are extracted
             settings = {
-                
+            "contours_method" (str): method to extract contours
             "cloud_thresh" (float): percentage of cloud cover allowed
             "cloud_mask_issue" (bool): whether to apply coastsat fix for incorrect cloud masking
             "min_beach_area" (float): minimum area of beach allowed
@@ -2195,6 +2538,7 @@ class Extracted_Shoreline:
             dict: The created shoreline settings.
         """
         SHORELINE_KEYS = [
+            "contours_method",
             "cloud_thresh",
             "cloud_mask_issue",
             "min_beach_area",
