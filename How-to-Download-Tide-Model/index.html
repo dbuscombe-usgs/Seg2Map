@@ -1,0 +1,2127 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An interactive toolbox for downloading satellite imagery, applying image segmentation models, mapping shoreline positions and more. The mapping extension for CoastSat and Zoo.">
+      
+      
+        <meta name="author" content="Sharon Fitzpatrick">
+      
+      
+        <link rel="canonical" href="https://SatelliteShorelines.github.io/CoastSeg/How-to-Download-Tide-Model/">
+      
+      
+        <link rel="prev" href="../extract_shoreline_settings/">
+      
+      
+        <link rel="next" href="../How-to-Tidally-Correct/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.5">
+    
+    
+      
+        <title>How to Download the Tide Model - CoastSeg</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8608ea7d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#overview" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="CoastSeg" class="md-header__button md-logo" aria-label="CoastSeg" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 23v-2c-1.41.05-2.78-.1-4-1-1.76 1.25-4.23 1.25-6 0-1.77 1.25-4.24 1.25-6 0-1.22.9-2.59 1.05-4 1v2c1.37.05 2.78-.06 4-.75 1.84 1 4.15 1 6 0 1.85 1 4.16 1 6 0 1.22.69 2.63.8 4 .75m-1.5-11.03V9.95c-1.76.01-3.5-.95-4.32-2.54l-.89-1.55c-.29-.46-.74-.75-1.22-.89L8.5 3.94 5 6.38 6.13 8l2.82-1.9 2.02.33-2.16 1.45C8.21 8.29 7.88 9 8 9.71l.53 3.1C7.12 12.26 3.21 11 3 13.23c.36 2.44 3.07 4.09 5.06 5.59 1.44.47 3-.24 3.94-1.36 1.32 1.7 3.89 2 5.5.54-.47-.42-1-.85-1.5-1.2v-3.85l-3.81-3 2.25-1.51C15.62 10.59 18 12 20.5 11.97M14 14v1.47c0-.04-2.34-1.31-2.19-1.23l-1.08-.54-.42-2.62zm5-10.5c0 1.11-.89 2-2 2s-2-.89-2-2 .9-2 2-2 2 .9 2 2"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CoastSeg
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              How to Download the Tide Model
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SatelliteShorelines/CoastSeg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    CoastSeg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="CoastSeg" class="md-nav__button md-logo" aria-label="CoastSeg" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 23v-2c-1.41.05-2.78-.1-4-1-1.76 1.25-4.23 1.25-6 0-1.77 1.25-4.24 1.25-6 0-1.22.9-2.59 1.05-4 1v2c1.37.05 2.78-.06 4-.75 1.84 1 4.15 1 6 0 1.85 1 4.16 1 6 0 1.22.69 2.63.8 4 .75m-1.5-11.03V9.95c-1.76.01-3.5-.95-4.32-2.54l-.89-1.55c-.29-.46-.74-.75-1.22-.89L8.5 3.94 5 6.38 6.13 8l2.82-1.9 2.02.33-2.16 1.45C8.21 8.29 7.88 9 8 9.71l.53 3.1C7.12 12.26 3.21 11 3 13.23c.36 2.44 3.07 4.09 5.06 5.59 1.44.47 3-.24 3.94-1.36 1.32 1.7 3.89 2 5.5.54-.47-.42-1-.85-1.5-1.2v-3.85l-3.81-3 2.25-1.51C15.62 10.59 18 12 20.5 11.97M14 14v1.47c0-.04-2.34-1.31-2.19-1.23l-1.08-.54-.42-2.62zm5-10.5c0 1.11-.89 2-2 2s-2-.89-2-2 .9-2 2-2 2 .9 2 2"/></svg>
+
+    </a>
+    CoastSeg
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SatelliteShorelines/CoastSeg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    CoastSeg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Google Earth Engine Setup
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Google Earth Engine Setup
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../google-earth-engine-setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    1. Sign up for Google Earth Engine for the First Time
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../google-earth-enable-api/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    2. Check if API is Enabled
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../register-existing-gee-account/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3. Register an existing project with Google Earth Engine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Installation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basic-install-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Basic Installation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install-miniforge/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Install MiniForge
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../secure-install-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Secure Installation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mac-install-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mac Installation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../update-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Update Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Jupyter Notebook Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Jupyter Notebook Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jupyter-notebook-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Jupyter Notebook
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Case Studies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Case Studies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../case_study_1/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Case Study 1 An Easy Location in Santa Cruz
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../case_study_2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Case Study 2 A Difficult Location in Alaska
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Contributing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Contribution-Guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contribution Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing-run-tests/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Run Test Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-a-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Add a New Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Getting-Started_to_contribute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started to Contribute
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-transects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Contribute Transects
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-zoo-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Test the Zoo Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-how-edit-website/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Edit the Website
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-release-new-package/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Release a New Package
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Tutorials
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to-auth/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to authenticate with Google Earth Engine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../map_guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use the Map
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edit_reference_shorelines/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Edit the Reference Shorelines
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to use the ROI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to-download/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Download Imagery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../download_settings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Download Settings Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to-upload-features/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Upload Features
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-is-in-a-session/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    What is in a Session
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sessions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Sessions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to-use-a-session-another-user/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Sessions from Another User
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-to-extract-shoreline-area/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Extract Shoreline Area
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extract_shorelines/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Extract Shorelines
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extract_shoreline_settings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extract Shorelines Settings Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    How to Download the Tide Model
+    
+  </span>
+  
+
+      </a>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../How-to-Tidally-Correct/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Tidally Correct
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../How-to-Create-Reference-Shorelines-%26-Transects%26ROIs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Create Reference Shorelines & Transects & ROIs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../How-to-Filter-Out-Bad-Imagery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Filter Bad Imagery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Tide Correction
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Tide Correction
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../How-to-Download-Tide-Model-updated/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Download the Tide Model
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../slope-file-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Acceptable Formats to Upload Slopes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tide-file-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Acceptable Formats to Upload Tides
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CoastSeg-API-Guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to use CoastSeg API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Zoo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Scripts
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Scripts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../How-to-Use-Scripts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Apply-Tidal_Correction_Script/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Apply Tidal Correction Script
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../How-to-Use-Flip-Transects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Flip Transects
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h1>
+<p>This guide will walk you through signing up for the necessary account and then choosing between two methods to download and clip the tide model for use in CoastSeg.</p>
+<h1 id="part-1-download-the-tide-model">Part 1: Download the Tide Model<a class="headerlink" href="#part-1-download-the-tide-model" title="Permanent link">&para;</a></h1>
+<h3 id="step-1-register">Step 1: Register<a class="headerlink" href="#step-1-register" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Sign Up:</strong> Begin by registering on the AVISO platform. Visit the <a href="https://www.aviso.altimetry.fr/en/data/data-access/registration-form.html">AVISO Registration Page </a> to create your account.</li>
+</ul>
+<h3 id="step-2-select-the-tide-model">Step 2: Select the Tide Model<a class="headerlink" href="#step-2-select-the-tide-model" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Select the FES Model</strong> During the registration process, you'll be presented with various data models to choose from. Ensure you select the <strong>FES (Finite Element Solution - Oceanic Tides Heights)</strong> model.</li>
+</ul>
+<h3 id="step-3-account-verification">Step 3: Account Verification<a class="headerlink" href="#step-3-account-verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Confirmation Email:</strong> After completing the registration, AVISO will send you a confirmation email. Check your inbox (and spam folder if necessary) for this email.</li>
+<li><strong>Verify Your Account</strong>: Click on the link provided in the email to verify your account. This step is crucial to activate your account and gain access to the data models.</li>
+</ul>
+<h3 id="step-4-accessing-your-dashboard">Step 4: Accessing Your Dashboard<a class="headerlink" href="#step-4-accessing-your-dashboard" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Login:</strong> Once your account is verified, <a href="https://www.aviso.altimetry.fr/en/my-aviso-plus.html">log into your AVISO account.</a></li>
+<li><strong>Navigate to Products:</strong> On your account dashboard, you'll find a left side menu. Click on the <strong>My products</strong> option.
+<img alt="image" src="https://github.com/Doodleverse/CoastSeg/assets/61564689/bf5382f0-6bc0-4867-893d-c8f84a3d3760" /></li>
+</ul>
+<h3 id="step-5-confirm-your-subscription">Step 5: Confirm Your Subscription<a class="headerlink" href="#step-5-confirm-your-subscription" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Check Your Subscriptions:</strong> In the "Your current subscriptions" section, ensure that the <strong>FES (Finite Element Solution - Oceanic Tides Heights)</strong> model is listed. This confirms that you've successfully subscribed to the desired model.</li>
+</ul>
+<p><img alt="FES_products" src="https://github.com/user-attachments/assets/87d23089-1f46-43c7-bb96-d1850dc7a9c4" /></p>
+<h1 id="part-2-download-and-clip-the-tide-model">Part 2: Download and Clip the Tide Model<a class="headerlink" href="#part-2-download-and-clip-the-tide-model" title="Permanent link">&para;</a></h1>
+<p>You have two options to download and clip the tide model: use the Jupyter Notebook (Recommended) or using a Script (Alternative). </p>
+<h3 id="space-and-time-requirements">Space and Time Requirements<a class="headerlink" href="#space-and-time-requirements" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Storage Space:</strong> Ensure you have at least 14GB of free space available.</li>
+<li><strong>Time Commitment:</strong> The download and setup process for the fes2014 model takes approximately 1-2 hours. This is a one-time requirement.</li>
+</ul>
+<h2 id="option-1-using-the-download_tide_modelipynb-notebook-recommended">Option 1: Using the Download_tide_model.ipynb Notebook (Recommended)<a class="headerlink" href="#option-1-using-the-download_tide_modelipynb-notebook-recommended" title="Permanent link">&para;</a></h2>
+<p>The easiest way to download and clip the tide model is to use this notebook. Run all the code in the notebook and you're done!</p>
+<ol>
+<li><strong>Prepare:</strong> Ensure you have you are in an activated coastseg environment and know your AVISO email and password.</li>
+<li><strong>Open Notebook:</strong> Launch <code>Download_tide_model.ipynb</code> in Jupyter Notebook.</li>
+</ol>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>cd CoastSeg
+jupyter lab Download_tide_model.ipynb
+</code></pre></div></td></tr></table></div>
+<p>3.<strong>Run Code:</strong> Execute all cells in the notebook. The code will guide you through the download and clipping process automatically.</p>
+<p>4.<strong>Check Results:</strong> Confirm that the model files are correctly downloaded and clipped in the specified directory.</p>
+<ul>
+<li>
+<p><strong>Example Output from Downloading Tide Model Step in Notebook</strong>
+  <img alt="download_tide_model_notebook" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/eecae8d2-cb5e-4e50-a587-3260ff9469b7" /></p>
+</li>
+<li>
+<p><strong>Example Output from Clipping Tide Model Step in Notebook</strong>
+  <img alt="clip_tide_model" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/abba33ae-1c63-4c48-be14-4e51e8224870" /></p>
+</li>
+</ul>
+<p>5.<strong>Downloaded Tide Model Contents</strong></p>
+<p><img alt="tide model contents" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/2a8f2425-993f-4184-90cf-01b6ff65af4a" /></p>
+<h1 id="option-2-using-the-script-alternative">Option 2: Using the Script (Alternative)<a class="headerlink" href="#option-2-using-the-script-alternative" title="Permanent link">&para;</a></h1>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Create Directory: Navigate to your CoastSeg installation directory and create a new folder named tide_model.</li>
+<li>Script Location: Change directory to the scripts folder within CoastSeg.</li>
+</ol>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>cd &lt;location of your coastseg directory&gt;
+mkdir tide_model
+cd scripts
+</code></pre></div></td></tr></table></div>
+<p><img alt="activate_coastseg_tide-Model_download" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/9706d481-5538-456d-8c79-b80d0c27b055" /></p>
+<h2 id="download-clip">Download &amp; Clip<a class="headerlink" href="#download-clip" title="Permanent link">&para;</a></h2>
+<p>1.<strong>Run Download Script:</strong> Execute the <code>aviso_fes_tides.py</code> script with the necessary parameters, including your AVISO credentials and target directory for the tide model.</p>
+<ul>
+<li>⚠️ Enter your AVISO password when prompted. Note that the password won't display as you type. After you have finished typing, press Enter to proceed.</li>
+<li>Replace <code>C:\Users\Sample\coastseg</code> with the actual location of your CoastSeg directory.</li>
+<li><img alt="AVISO Password Prompt" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/4e858552-6869-4511-8a87-5caa0f12dd38" /></li>
+</ul>
+<p>Example command:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code> python aviso_fes_tides.py --user your_email@example.com -D C:\Users\Sample\coastseg\tide_model --load --log --tide FES2014 -G
+</code></pre></div></td></tr></table></div>
+<p>2.<strong>Clip Model to Regions:</strong> After downloading, run the <code>clip_and_write_new_nc_files_cmd_line.py</code> script with the paths to your tide model directory and the regions geojson file.</p>
+<p>To make the tide predictions compute faster we will clip the model it to various regions across the planet. After we've clipped the model to each region, when we want to predict the tide at a particular latitude and longitude we first figure out which region the point lies within, then we load the tide model we clipped to that region.</p>
+<ul>
+<li><code>-R or --regions_file</code> the full path to the regions geojson file. You should find this file <code>tide_regions_map.geojson</code> in the <code>scripts</code></li>
+<li><code>-T or --tide_model</code> the full path to the directory containing the tide model downloaded</li>
+<li>Replace <code>C:\Users\Sample\coastseg</code> with the actual location of your CoastSeg directory.</li>
+</ul>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>python clip_and_write_new_nc_files_cmd_line.py -T C:\Users\Sample\coastseg\tide_model -R C:\Users\Sample\coastseg\scripts\tide_regions_map.geojson
+</code></pre></div></td></tr></table></div>
+<p>3.<strong>Validate:</strong> Ensure each region directory under tide_model contains clipped tide model files.</p>
+<ul>
+<li>Each region will have the same format as region0 the full list of files is omitted for brevity.</li>
+</ul>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code>├── CoastSeg
+|
+|___scripts
+|    |_ aviso_fes_tides.py
+|    |_ clip_and_write_new_nc_files_cmd_line.py
+|    |_ tide_regions_map.geojson
+|
+|___tide_model
+|    |_ fes2014
+|    |     |_load_tide
+|    |     |       |__2n2.nc.gz
+|    |     |       |__eps2.nc.gz
+|    |     |       |__ ....
+|    |     |_ocean_tide
+|    |     |       |__2n2.nc.gz
+|    |     |       |__eps2.nc.gz
+|    |     |       |__ ....
+|    |
+|    |_ region0
+|    |     |_fes2014
+|    |     |       |__load_tide
+|    |     |       |       |__2n2.nc
+|    |     |       |       |__eps2.nc
+|    |     |       |       |__....
+|    |     |       |__ocean_tide
+|    |     |       |       |__2n2.nc
+|    |     |       |       |__eps2.nc
+|    |     |       |       |__....
+|    |_ region1
+|    |_ region2
+|    |_ region3
+|    |_ region4
+|    |_ region5
+|    |_ region6
+|    |_ region7
+|    |_ region8
+|    |_ region9
+|    |_ region10
+</code></pre></div></td></tr></table></div>
+<p>4.<strong>Downloaded Tide Model Contents</strong></p>
+<p><img alt="tide model contents" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/2a8f2425-993f-4184-90cf-01b6ff65af4a" /></p>
+<h2 id="running-into-problems">Running into Problems?<a class="headerlink" href="#running-into-problems" title="Permanent link">&para;</a></h2>
+<hr />
+<ol>
+<li>Your account may not be verified yet, which means you can't download the model</li>
+<li>Occasionally the AVISO server goes down. Wait a few hours and try again and see if its working.</li>
+</ol>
+<h3 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h3>
+<p>If you are running coastseg on a secure network you may need to make the following modifications to your <code>.condarc</code> file.</p>
+<ol>
+<li>If you get an error message similar to <code>CondaValueError: You have chosen a non-default solver backend(libmamba) but it was not recongized</code></li>
+<li>Solution: comment out the line in the .condarc file <code>solve:libmamba</code></li>
+<li>You may also need to modify the <code>ssl_verify</code> to either True or False depending on your network security.</li>
+<li>Always switch <code>ssl_verify</code> to True if you ever set it it to False for debugging purposes.</li>
+</ol>
+<h1 id="how-to-perform-tide-correction">How to Perform Tide Correction<a class="headerlink" href="#how-to-perform-tide-correction" title="Permanent link">&para;</a></h1>
+<p>⚠️ You must have run the script to download the FES2014 tide model before attempting to correct tides
+This script provides utilities for modeling tides and correcting time series data based on tide predictions.</p>
+<h2 id="important-read-before-using-tide-correction-button">⚠️ Important: Read Before Using Tide Correction Button<a class="headerlink" href="#important-read-before-using-tide-correction-button" title="Permanent link">&para;</a></h2>
+<p>If the tide model was NOT downloaded to <code>CoastSeg/tide_model</code> then the tide correction button will NOT work. The tide correction button will try to load the tide model from <code>&lt;CoastSeg location&gt;/tide_model</code> and an error will occur. Instead follow the instructions in at <a href="#option-2-tide-correction-script">Option 2: Tide Correction Script</a></p>
+<p>If you downloaded the tide model to a different location follow the instructions at <a href="#option-2-tide-correction-script">Option 2: Tide Correction Script</a>
+to use the script <code>apply_tidal_correction.py</code></p>
+<h2 id="option-1-tide-correction-button-method">Option 1: Tide Correction Button Method<a class="headerlink" href="#option-1-tide-correction-button-method" title="Permanent link">&para;</a></h2>
+<p>Ever since coastseg 1.1.0 released you can now use the <code>correct tides</code> button in coastseg to automatically correct the timeseries. This button will automatically find which files need to be tidally corrected and apply the tidal correction for you.</p>
+<h2 id="important">⚠️ Important<a class="headerlink" href="#important" title="Permanent link">&para;</a></h2>
+<p>If the tide model was NOT downloaded to <code>CoastSeg/tide_model</code> then the tide correction button will NOT work. The tide correction button will try to load the tide model from <code>&lt;CoastSeg location&gt;/tide_model</code> and an error will occur. Instead follow the instructions in at <a href="#option-2-tide-correction-script">Option 2: Tide Correction Script</a></p>
+<h3 id="steps">Steps<a class="headerlink" href="#steps" title="Permanent link">&para;</a></h3>
+<p><strong>WARNING</strong>
+You must have downloaded the tide model to the <code>tide_model</code> folder within coastseg for this button to work correctly.</p>
+<p>1.<strong>Enter the beach slope</strong></p>
+<ul>
+<li>This is the beach slope in meters for the ROI you have selected.</li>
+</ul>
+<p>2.<strong>Enter the beach elevation</strong></p>
+<ul>
+<li>This is the beach elevation in meters for the ROI you have selected.</li>
+</ul>
+<p>3.<strong>Select the ROIs' ids to tidally correct</strong></p>
+<p>4.<strong>Click compute tides and wait a few minutes.</strong></p>
+<p>If you encounter any issues or have any questions please submit an issue at <a href="https://github.com/Doodleverse/CoastSeg/issues/new/choose">CoastSeg Issues</a></p>
+<p><img alt="predict-tide_script" src="https://github.com/SatelliteShorelines/CoastSeg/assets/61564689/4ce506c2-403e-44e7-9ecd-6a4a4898b870" /></p>
+<h2 id="option-2-tide-correction-script">Option 2: Tide Correction Script<a class="headerlink" href="#option-2-tide-correction-script" title="Permanent link">&para;</a></h2>
+<p>⚠️ If the tide model was NOT downloaded to <code>CoastSeg/tide_model</code>, then you must use the tide correction script.</p>
+<h3 id="example-1-apply-tide-correction-to-a-session-and-provide-tide-model-location">Example 1: Apply Tide Correction to a session and provide tide model location<a class="headerlink" href="#example-1-apply-tide-correction-to-a-session-and-provide-tide-model-location" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Choose a session</strong></li>
+<li>In this example I will be using session <code>dnz3_extract_shorelines_10_yr</code> and using ROI <code>ID_dnz3_datetime12-22-23__09_10_44</code></li>
+<li>Example: <code>C:\development\doodleverse\coastseg\CoastSeg\sessions\dnz3_extract_shorelines_10_yr\ID_dnz3_datetime12-22-23__09_10_44</code></li>
+<li><strong>Get the location of the config_gdf.geojson file</strong></li>
+<li>This parameter is used after the <code>-C</code></li>
+<li>Example: <code>-C "C:\development\doodleverse\coastseg\CoastSeg\sessions\dnz3_extract_shorelines_10_yr\ID_dnz3_datetime12-22-23__09_10_44\config_gdf.geojson"</code></li>
+<li><strong>Get the location of the transect_time_series.csv file</strong></li>
+<li>This parameter is used after the <code>-T</code></li>
+<li>Example: <code>-T "C:\development\doodleverse\coastseg\CoastSeg\sessions\dnz3_extract_shorelines_10_yr\ID_dnz3_datetime12-22-23__09_10_44\transect_time_series.csv"</code></li>
+<li><strong>Get the location of the tide_model</strong></li>
+<li>This parameter is used after the <code>-M</code></li>
+<li>Example: <code>-M "C:\development\doodleverse\coastseg\CoastSeg\tide_model"</code></li>
+<li>Select a Beach Elevation</li>
+<li>This is the elevation of the beach in meters for the ROI you have selected</li>
+<li>Example: <code>-E 3.2</code></li>
+<li>Select a Beach Slope</li>
+<li>This is the slope of the beach in meters for the ROI you have selected</li>
+<li>Example: <code>-S 2.1</code></li>
+<li><strong>Assemble the command</strong></li>
+<li>Assemble all commands into a single line. I recommended using notepad to combine all the commands into a single line
+   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>python apply_tidal_correction.py -E 3.2 -S 2.1 -C
+&quot;C:\development\doodleverse\coastseg\CoastSeg\sessions\dnz3_extract_shorelines_10_yr\ID_dnz3_datetime12-22-23__09_10_44\config_gdf.geojson&quot; -T
+&quot;C:\development\doodleverse\coastseg\CoastSeg\sessions\dnz3_extract_shorelines_10_yr\ID_dnz3_datetime12-22-23__09_10_44\transect_time_series.csv&quot;
+-M &quot;C:\development\doodleverse\coastseg\CoastSeg\tide_model&quot;
+</code></pre></div></td></tr></table></div></li>
+<li><strong>Run the command</strong></li>
+<li>It takes a few minutes to predict the tides</li>
+</ol>
+<p><img alt="image" src="https://github.com/Doodleverse/CoastSeg/assets/61564689/13582ba7-63c6-46d4-93c1-aa68db23626c" /></p>
+<h3 id="parameters">Parameters:<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>-C (or -c) [CONFIG_FILE_PATH]</strong></p>
+</li>
+<li>
+<p>Description: Path to the configuration file.</p>
+</li>
+<li>Example: <code>-C "path_to_config_file"</code></li>
+<li>
+<p><code>CONFIG_FILE_PATH</code>: Path to the configuration file. This is the <code>config_gdf.geojson</code> in the session directory generated when shorelines were extracted</p>
+</li>
+<li>
+<p><strong>-T (or -t) [RAW_TIMESERIES_FILE_PATH]</strong></p>
+</li>
+<li>
+<p>Description: Path to the raw timeseries file.</p>
+</li>
+<li>Example: <code>-T "path_to_timeseries_file"</code></li>
+<li>
+<p><code>RAW_TIMESERIES_FILE_PATH</code>: Path to a csv file containing the time series created by extracting shorelines with coastseg. This timeseries
+     represents the intersection of each transect with the shoreline extracted for a particular date and time. It is not tidally corrected.</p>
+</li>
+<li>
+<p><strong>-E (or -e) [REFERENCE_ELEVATION]</strong></p>
+</li>
+<li>
+<p>Description: Set the reference elevation value. This is a float number.</p>
+</li>
+<li>
+<p>Example: <code>-E 3</code></p>
+</li>
+<li>
+<p><strong>-S (or -s) [BEACH_SLOPE]</strong></p>
+</li>
+<li>Description: Set the beach slope value. This is a float number.</li>
+<li>Example: <code>-S 2</code></li>
+</ol>
+<h3 id="optional-configuration-options">Optional Configuration Options<a class="headerlink" href="#optional-configuration-options" title="Permanent link">&para;</a></h3>
+<p>If you didn't install the tide model in the default location you will need to modify the following variables</p>
+<ol>
+<li>
+<p><strong>-P (or -p) [TIDE_PREDICTIONS_FILE_NAME]</strong></p>
+</li>
+<li>
+<p>Description: File name for saving a csv file containing the tide predictions for each date time in the timeseries provided.</p>
+</li>
+<li>By Default this file is named "tidal_predictions.csv"</li>
+<li>
+<p>Example: <code>-P "tidal_predictions.csv"</code></p>
+</li>
+<li>
+<p><strong>-O (or -o) [TIDALLY_CORRECTED_FILE_NAME]</strong></p>
+</li>
+<li>
+<p>Description: File name for saving the tidally corrected time series csv file.</p>
+</li>
+<li>By Default this file is named "tidally_corrected_time_series.csv"</li>
+<li>
+<p>Example: <code>-O "tidally_corrected_time_series.csv"</code></p>
+</li>
+<li>
+<p><strong>-R (or -r) [MODEL_REGIONS_GEOJSON_PATH]</strong></p>
+</li>
+<li>
+<p>Description: Path to the model regions GeoJSON file.</p>
+</li>
+<li>By default the program looks for <code>tide_regions_map.geojson</code> in the <code>scripts</code> directory</li>
+<li>Example: <code>-R "c:\coastseg\scripts\tide_regions_map.geojson"</code></li>
+<li>
+<p><code>MODEL_REGIONS_GEOJSON_PATH</code>: Path to the location of the geojson file containing the regions used to create the clipped tide model in the previous steps. This file is typically located in the scripts directory within coastseg. "c:\coastseg\scripts\tide_regions_map.geojson"`</p>
+</li>
+<li>
+<p><strong>-M (or -m) [FES_2014_MODEL_PATH]</strong></p>
+</li>
+<li>Description: Path to the FES 2014 tide model directory.</li>
+<li>Example: <code>-M "c:\coastseg\tide_model"</code></li>
+<li><code>FES_2014_MODEL_PATH</code>: Path to the FES 2014 tide model, by default attempts to load from <code>coastseg\tide_model</code> if you installed the tide_model from
+     step 3 in a different location modify this variable to have the full location to the directory containing the clipped 2014 fes tide model.</li>
+</ol>
+<h3 id="running-the-script">Running the script:<a class="headerlink" href="#running-the-script" title="Permanent link">&para;</a></h3>
+<p>Use the parameters as described while executing the script. Here's an example usage:
+<strong>Example 1: Only Required Parameter</strong></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>scripts
+python<span class="w"> </span>apply_tidal_correction.py<span class="w"> </span>-C<span class="w"> </span><span class="s2">&quot;path_to_config&quot;</span><span class="w"> </span>-T<span class="w"> </span><span class="s2">&quot;path_to_timeseries&quot;</span><span class="w"> </span>-E<span class="w"> </span><span class="m">3</span><span class="w"> </span>-S<span class="w"> </span><span class="m">2</span>
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>python apply_tidal_correction.py -E 3 -S 2 -C &quot;C:\development\doodleverse\coastseg\CoastSeg\sessions\fire_island\ID_ham1_datetime08-03-23__10_58_34\config_gdf.geojson&quot; -T &quot;C:\development\doodleverse\coastseg\CoastSeg\sessions\fire_island\ID_ham1_datetime08-03-23__10_58_34\transect_time_series.csv&quot;
+</code></pre></div></td></tr></table></div>
+<p><strong>Example 2: All Available Parameters</strong></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>scripts
+python<span class="w"> </span>apply_tidal_correction.py<span class="w"> </span>-C<span class="w"> </span><span class="s2">&quot;path_to_config&quot;</span><span class="w"> </span>-T<span class="w"> </span><span class="s2">&quot;path_to_timeseries&quot;</span><span class="w"> </span>-E<span class="w"> </span><span class="m">3</span><span class="w"> </span>-S<span class="w"> </span><span class="m">2</span><span class="w"> </span>-P<span class="w"> </span><span class="s2">&quot;predictions.csv&quot;</span><span class="w"> </span>-O<span class="w"> </span><span class="s2">&quot;corrected.csv&quot;</span><span class="w"> </span>-R<span class="w"> </span><span class="s2">&quot;regions.geojson&quot;</span><span class="w"> </span>-M<span class="w"> </span><span class="s2">&quot;model_directory&quot;</span>
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>scripts
+python<span class="w"> </span>apply_tidal_correction.py<span class="w"> </span>-E<span class="w"> </span><span class="m">3</span><span class="w"> </span>-S<span class="w"> </span><span class="m">2</span><span class="w"> </span>-C<span class="w"> </span><span class="s2">&quot;C:\development\doodleverse\coastseg\CoastSeg\sessions\fire_island\ID_ham1_datetime08-03-23__10_58_34\config_gdf.geojson&quot;</span><span class="w"> </span>-T<span class="w"> </span><span class="s2">&quot;C:\development\doodleverse\coastseg\CoastSeg\sessions\fire_island\ID_ham1_datetime08-03-23__10_58_34\transect_time_series.csv&quot;</span><span class="w"> </span>-P<span class="w"> </span><span class="s2">&quot;tidal_predictions.csv&quot;</span><span class="w"> </span>-O<span class="w"> </span><span class="s2">&quot;tidally_corrected_time_series.csv&quot;</span><span class="w"> </span>-R<span class="w"> </span><span class="s2">&quot;C:\development\doodleverse\coastseg\CoastSeg\scripts\tide_regions_map.geojson&quot;</span><span class="w"> </span>-M<span class="w"> </span><span class="s2">&quot;C:\development\doodleverse\coastseg\CoastSeg\tide_model&quot;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<p>The results will be located in the scripts directory where the <code>apply_tidal_correction.py</code> script is located.</p>
+<ul>
+<li><code>tidal_predictions.csv</code>: Contains the tide predictions for each datetime in the timeseries csv file given by <code>RAW_TIMESERIES_FILE_PATH</code>.</li>
+<li><code>"tidally_corrected_time_series.csv"</code>: Contains the tidally corrected time series data based on the timeseries csv file given by <code>RAW_TIMESERIES_FILE_PATH</code>.</li>
+</ul>
+<h2 id="credits">Credits<a class="headerlink" href="#credits" title="Permanent link">&para;</a></h2>
+<p>Thank you <a href="https://github.com/GeoscienceAustrali/dea-coastlines/wiki/Setting-up-tidal-models-for-DEA-Coastlines">DEA-Coastlines</a> for making a guide on how to use pyTMD and <a href="https://pytmd.readthedocs.io/en/latest/api_reference/aviso_fes_tides.html">pyTMD</a> for making a easy to use script to download the AVISO FES 2014 Model.
+The <code>model_tides</code> in this code has been modified and the original function was originally written by Robbi Bishop-Taylor for the <code>dea-tools</code> package https://github.com/GeoscienceAustralia/dea-notebooks/blob/develop/Tools/dea_tools/coastal.py#L466-L473</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f1b6f286.min.js"></script>
+      
+    
+  </body>
+</html>
