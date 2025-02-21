@@ -1,0 +1,2092 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An interactive toolbox for downloading satellite imagery, applying image segmentation models, mapping shoreline positions and more. The mapping extension for CoastSat and Zoo.">
+      
+      
+        <meta name="author" content="Sharon Fitzpatrick">
+      
+      
+        <link rel="canonical" href="https://SatelliteShorelines.github.io/CoastSeg/">
+      
+      
+      
+        <link rel="next" href="google-earth-engine-setup/">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.5">
+    
+    
+      
+        <title>CoastSeg</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.8608ea7d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#installation-instructions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="CoastSeg" class="md-header__button md-logo" aria-label="CoastSeg" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 23v-2c-1.41.05-2.78-.1-4-1-1.76 1.25-4.23 1.25-6 0-1.77 1.25-4.24 1.25-6 0-1.22.9-2.59 1.05-4 1v2c1.37.05 2.78-.06 4-.75 1.84 1 4.15 1 6 0 1.85 1 4.16 1 6 0 1.22.69 2.63.8 4 .75m-1.5-11.03V9.95c-1.76.01-3.5-.95-4.32-2.54l-.89-1.55c-.29-.46-.74-.75-1.22-.89L8.5 3.94 5 6.38 6.13 8l2.82-1.9 2.02.33-2.16 1.45C8.21 8.29 7.88 9 8 9.71l.53 3.1C7.12 12.26 3.21 11 3 13.23c.36 2.44 3.07 4.09 5.06 5.59 1.44.47 3-.24 3.94-1.36 1.32 1.7 3.89 2 5.5.54-.47-.42-1-.85-1.5-1.2v-3.85l-3.81-3 2.25-1.51C15.62 10.59 18 12 20.5 11.97M14 14v1.47c0-.04-2.34-1.31-2.19-1.23l-1.08-.54-.42-2.62zm5-10.5c0 1.11-.89 2-2 2s-2-.89-2-2 .9-2 2-2 2 .9 2 2"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CoastSeg
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Home
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SatelliteShorelines/CoastSeg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    CoastSeg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="CoastSeg" class="md-nav__button md-logo" aria-label="CoastSeg" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 23v-2c-1.41.05-2.78-.1-4-1-1.76 1.25-4.23 1.25-6 0-1.77 1.25-4.24 1.25-6 0-1.22.9-2.59 1.05-4 1v2c1.37.05 2.78-.06 4-.75 1.84 1 4.15 1 6 0 1.85 1 4.16 1 6 0 1.22.69 2.63.8 4 .75m-1.5-11.03V9.95c-1.76.01-3.5-.95-4.32-2.54l-.89-1.55c-.29-.46-.74-.75-1.22-.89L8.5 3.94 5 6.38 6.13 8l2.82-1.9 2.02.33-2.16 1.45C8.21 8.29 7.88 9 8 9.71l.53 3.1C7.12 12.26 3.21 11 3 13.23c.36 2.44 3.07 4.09 5.06 5.59 1.44.47 3-.24 3.94-1.36 1.32 1.7 3.89 2 5.5.54-.47-.42-1-.85-1.5-1.2v-3.85l-3.81-3 2.25-1.51C15.62 10.59 18 12 20.5 11.97M14 14v1.47c0-.04-2.34-1.31-2.19-1.23l-1.08-.54-.42-2.62zm5-10.5c0 1.11-.89 2-2 2s-2-.89-2-2 .9-2 2-2 2 .9 2 2"/></svg>
+
+    </a>
+    CoastSeg
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SatelliteShorelines/CoastSeg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    CoastSeg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation Instructions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-coastseg" class="md-nav__link">
+    <span class="md-ellipsis">
+      What is CoastSeg?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-aims" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project Aims
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#utility-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Utility Scripts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doodleversezoo-models-used-in-coastseg" class="md-nav__link">
+    <span class="md-ellipsis">
+      Doodleverse/Zoo models Used in CoastSeg
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Sources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authors-and-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authors and Contributions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Packages
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Google Earth Engine Setup
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Google Earth Engine Setup
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="google-earth-engine-setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    1. Sign up for Google Earth Engine for the First Time
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="google-earth-enable-api/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    2. Check if API is Enabled
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="register-existing-gee-account/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3. Register an existing project with Google Earth Engine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Installation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="basic-install-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Basic Installation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="install-miniforge/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Install MiniForge
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="secure-install-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Secure Installation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mac-install-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mac Installation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="update-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Update Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Jupyter Notebook Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Jupyter Notebook Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="jupyter-notebook-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Jupyter Notebook
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Case Studies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Case Studies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="case_study_1/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Case Study 1 An Easy Location in Santa Cruz
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="case_study_2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Case Study 2 A Difficult Location in Alaska
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Contributing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Contribution-Guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contribution Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contributing-run-tests/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Run Test Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contribute-a-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Add a New Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Getting-Started_to_contribute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started to Contribute
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contribute-transects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Contribute Transects
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="test-zoo-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Test the Zoo Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contribute-how-edit-website/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Edit the Website
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contribute-release-new-package/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Release a New Package
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Tutorials
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to-auth/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to authenticate with Google Earth Engine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="map_guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use the Map
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="edit_reference_shorelines/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Edit the Reference Shorelines
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="roi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to use the ROI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to-download/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Download Imagery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="download_settings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Download Settings Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to-upload-features/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Upload Features
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="what-is-in-a-session/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    What is in a Session
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sessions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Sessions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to-use-a-session-another-user/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Sessions from Another User
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to-extract-shoreline-area/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Extract Shoreline Area
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="extract_shorelines/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Extract Shorelines
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="extract_shoreline_settings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extract Shorelines Settings Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Download-Tide-Model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Download the Tide Model
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Tidally-Correct/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Tidally Correct
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Create-Reference-Shorelines-%26-Transects%26ROIs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Create Reference Shorelines & Transects & ROIs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Filter-Out-Bad-Imagery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Filter Bad Imagery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Tide Correction
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Tide Correction
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Download-Tide-Model-updated/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Download the Tide Model
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="slope-file-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Acceptable Formats to Upload Slopes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="tide-file-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Acceptable Formats to Upload Tides
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="CoastSeg-API-Guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to use CoastSeg API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Zoo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Scripts
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Scripts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Use-Scripts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Apply-Tidal_Correction_Script/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Use Apply Tidal Correction Script
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="How-to-Use-Flip-Transects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How to Flip Transects
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation Instructions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-coastseg" class="md-nav__link">
+    <span class="md-ellipsis">
+      What is CoastSeg?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-aims" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project Aims
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#utility-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Utility Scripts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doodleversezoo-models-used-in-coastseg" class="md-nav__link">
+    <span class="md-ellipsis">
+      Doodleverse/Zoo models Used in CoastSeg
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Sources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authors-and-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authors and Contributions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Packages
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Home</h1>
+
+<p><a href="https://pypi.python.org/pypi/coastseg"><img alt="image" src="https://img.shields.io/pypi/v/coastseg.svg?color=%23ec3dc8" /></a>
+<a href="https://www.youtube.com/@CoastSeg-n3e"><img alt="image" src="https://img.shields.io/badge/YouTube-Channel-red" /></a>
+<a href="https://doi.org//10.21105/joss.06683"><img alt="status" src="https://joss.theoj.org/papers//10.21105/joss.06683/status.svg" /></a>
+<a href="https://anaconda.org/conda-forge/coastseg"><img alt="image" src="https://img.shields.io/conda/vn/conda-forge/coastseg.svg" /></a>
+</br>
+<a href="https://github.com/SatelliteShorelines/CoastSeg/actions"><img alt="image" src="https://github.com/SatelliteShorelines/CoastSeg/actions/workflows/pip_install_e.yml/badge.svg" /></a></p>
+<p><a href="https://github.com/Doodleverse/segmentation_gym/commits/main"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/SatelliteShorelines/CoastSeg" /></a>
+<a href="https://github.com/SatelliteShorelines/CoastSeg/graphs/commit-activity"><img alt="Maintenance" src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" /></a>
+<a href="https://github.com/SatelliteShorelines/CoastSeg/wiki"><img alt="Wiki" src="https://img.shields.io/badge/wiki-documentation-forestgreen" /></a>
+<img alt="GitHub" src="https://img.shields.io/github/license/Doodleverse/segmentation_gym" />
+<a href="https://github.com/SatelliteShorelines/CoastSeg/discussions"><img alt="Wiki" src="https://img.shields.io/badge/discussion-active-forestgreen" /></a></p>
+<p><img alt="Python" src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&amp;logo=python&amp;logoColor=ffdd54" />
+<img alt="TensorFlow" src="https://img.shields.io/badge/TensorFlow-%23FF6F00.svg?style=for-the-badge&amp;logo=TensorFlow&amp;logoColor=white" />
+<img alt="Keras" src="https://img.shields.io/badge/Keras-%23D00000.svg?style=for-the-badge&amp;logo=Keras&amp;logoColor=white" /></p>
+<p><img src="https://user-images.githubusercontent.com/61564689/212394936-263ec9fc-fb82-45b8-bc79-bc57dafdae73.gif" width="350" height="350"></p>
+<h2 id="installation-instructions">Installation Instructions<a class="headerlink" href="#installation-instructions" title="Permanent link">&para;</a></h2>
+<p>CoastSeg is a Jupyter and Python based program that runs in a conda environment. Please see <a href="https://satelliteshorelines.github.io/CoastSeg/basic-install-guide/">the installation guide</a></p>
+<p>Check out the <a href="https://www.youtube.com/@CoastSeg-n3e/videos">CoastSeg YouTube Channel</a> for tutorials! </p>
+<p><a href="https://www.youtube.com/watch?v=u6AwISfEtL4"><img alt="CoastSeg Tutorial" src="https://img.youtube.com/vi/u6AwISfEtL4/0.jpg" /></a></p>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<p>CoastSeg works best on sand and gravel beaches. It is not as effective at other sites or a marsh beaches.</p>
+<p>Please see <a href="https://satelliteshorelines.github.io/CoastSeg/getting-started/">Getting Started guide</a>, which includes instructions for</p>
+<ul>
+<li>Pre-requisites (accounts, data access)</li>
+<li>Installation and setup</li>
+<li>Extracting shorelines</li>
+<li>Applying tidal corrections to extracted shorelines</li>
+</ul>
+<h2 id="what-is-coastseg">What is CoastSeg?<a class="headerlink" href="#what-is-coastseg" title="Permanent link">&para;</a></h2>
+<p>⭐ Check out the CoastSeg paper for free: <a href="https://joss.theoj.org/papers/10.21105/joss.06683">CoastSeg Paper</a></p>
+<p>CoastSeg is an interactive browser-based program that aims to broaden the adoption of satellite-derived shoreline (SDS) detection and coastal landcover mapping workflows among coastal scientists and coastal resource management practitioners. SDS is a sub-field of coastal sciences that aims to detect and post-process a time-series of shoreline locations from publicly available satellite imagery.</p>
+<p>CoastSeg is a Python package installed via pip into a conda environment that serves as an toolkit for building custom SDS workflows. CoastSeg also provides full SDS workflow implementations via Jupyter notebooks and Python scripts that call functions and classes in the core CoastSeg toolkit for specific workflows. CoastSeg provides two fully functioning SDS workflows and its design allows for collaborators in the SDS software community to contribute additional workflows. All the codes, notebooks, scripts, and documentation are hosted on the <a href="https://github.com/SatelliteShorelines/CoastSeg">CoastSeg GitHub repository</a>.</p>
+<p>So-called `instantaneous' SDS workflows, such as the implementation of <a href="https://github.com/kvos/CoastSat">CoastSat</a>, where shorelines are extracted from each individual satellite image rather than temporal composites, follow a basic recipe, namely:</p>
+<ol>
+<li>waterline estimation, where the 2D (x,y) location of the land-sea interface is determined
+   and</li>
+<li>water-level correction, where the waterline location is mapped onto a shore-perpendicular transect, converted to a linear distance along that transect, then corrected for water level, and referenced to a particular elevation contour on the beach.</li>
+</ol>
+<h2 id="project-aims">Project Aims<a class="headerlink" href="#project-aims" title="Permanent link">&para;</a></h2>
+<p>CoastSeg has three broad aims. The first aim is to be a toolkit consisting functions that operate the core SDS workflow functionalities. This includes file input/output, image downloading, geospatial conversion, tidal model API handling, mapping 2D shorelines to 1D transect-based measurements, and numerous other functions common to a basic SDS workflow, regardless of a particular waterline estimation methodology. This waterline detection algorithm will be crucial to the success of any SDS workflow because it is the step that identifies the the boundary between sea and land which serves as the basis for shoreline mapping. The idea behind the design of CoastSeg is that users could extend or customize functionality using scripts and notebooks.</p>
+<p>The second aim of CoastSeg is therefore to provide fully functioning SDS implementations in an accessible browser notebook format. Our principal objective to date has been to re-implement and improve upon a popular existing toolbox, <a href="https://github.com/kvos/CoastSat">CoastSat</a>, allowing the user to carry out the well-established CoastSat SDS workflow, but in a more accessible and convenient way within the CoastSeg platform. In order to achieve this, we developed <a href="https://github.com/SatelliteShorelines/coastsat_package">CoastSat-package</a>, a Python package that is installed into the CoastSeg conda environment. CoastSat-package contains re-implemented versions of the original CoastSat codes, addresses the lack of pip or conda installability of CoastSat, and isolates the CoastSeg-specific enhancements from the original CoastSat code.</p>
+<p>The third and final aim of CoastSeg is to implement a method to carry out SDS workflows in experimental and collaborative contexts, which aids both oversight and reproducibility as well as practical needs based on division of labor. We do this using sessions, a mechanism for saving the current state of the application into a session's folder. This folder contains all necessary inputs, outputs, and references to downloaded data used to generate the results. Sessions allow users to iteratively experiment with different combinations of settings and makes CoastSeg fully reproducible because everything needed to reproduce the session is saved to the folder. Users can share their sessions with others, enabling peers to replicate experiments, build upon previous work, or access data downloaded by someone else. This simplifies handovers to new users from existing users, simplifies teaching of the program, and encourages collective experimentation which may result in better shoreline data.</p>
+<p>CoastSeg is also designed to be extendable, serving as a hub that hosts alternative SDS workflows and similar workflows that can be encoded in a Jupyter notebook built upon the CoastSeg and CoastSat-package core functionalities. Additional notebooks can be designed to carry out shoreline extraction and coastal landcover mapping using alternative methods. We provide an example of an alternative SDS workflow based on a deep-learning based semantic segmentation model that is briefly summarized at the end of this paper. To implement a custom waterline detection workflow the originator of that workflow would contribute new Jupyter notebook, and add their specific waterline detection algorithm to the CoastSeg source code, so it could be used in their notebook's implementation.</p>
+<p><img alt="coastseg_main_flow_updated" src="https://github.com/Doodleverse/CoastSeg/assets/61564689/ac9076bd-bf40-44c5-a686-0fdc1acf8656" /></p>
+<h2 id="utility-scripts">Utility Scripts<a class="headerlink" href="#utility-scripts" title="Permanent link">&para;</a></h2>
+<p>CoastSeg comes with a collection of pre-processing script utilities for common i/o problems. Please see <a href="https://satelliteshorelines.github.io/CoastSeg/How-to-Use-Scripts/">the Scripts guide</a>, which includes the list of available scripts, and how to use them.</p>
+<h2 id="doodleversezoo-models-used-in-coastseg">Doodleverse/Zoo models Used in CoastSeg<a class="headerlink" href="#doodleversezoo-models-used-in-coastseg" title="Permanent link">&para;</a></h2>
+<p>A lot of work underpins the 'Zoo' method for SDS, which uses models and datasets developed over several years and still under an active cycle of improvement. That is, once we find the time!</p>
+<p>You can find all the available models at <a href="https://github.com/Doodleverse/segmentation_zoo">segmentation_zoo</a>.
+Made using the following software, implemented as <a href="[Zoo](https://github.com/Doodleverse/segmentation_gym)">Doodleverse/Segmentation Gym</a>:</p>
+<ul>
+<li>Segmentation Gym: Buscombe, D., &amp; Goldstein, E. B. (2022). A reproducible and reusable pipeline for segmentation of geoscientific imagery. Earth and Space Science, 9, e2022EA002332. https://doi.org/10.1029/2022EA002332</li>
+</ul>
+<p>Using the following datasets:</p>
+<ul>
+<li>Buscombe, Daniel. (2022). Images and 2-class labels for semantic segmentation of Sentinel-2 and Landsat RGB, NIR, and SWIR satellite images of coasts (water, other) (v1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.7384263</li>
+<li>Wernette, P.A., Buscombe, D.D., Favela, J., Fitzpatrick, S., and Goldstein E., 2022, Coast Train--Labeled imagery for training and evaluation of data-driven models for image segmentation: U.S. Geological Survey data release, https://doi.org/10.5066/P91NP87I. See https://coasttrain.github.io/CoastTrain/ for more information</li>
+<li>Buscombe, Daniel. (2023). June 2023 Supplement Images and 4-class labels for semantic segmentation of Sentinel-2 and Landsat RGB, NIR, and SWIR satellite images of coasts (water, whitewater, sediment, other) (v1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.8011926</li>
+<li>Buscombe, Daniel, Goldstein, Evan, Bernier, Julie, Bosse, Stephen, Colacicco, Rosa, Corak, Nick, Fitzpatrick, Sharon, del Jesús González Guillén, Anais, Ku, Venus, Paprocki, Julie, Platt, Lindsay, Steele, Bethel, Wright, Kyle, &amp; Yasin, Brandon. (2022). Images and 4-class labels for semantic segmentation of Sentinel-2 and Landsat RGB satellite images of coasts (water, whitewater, sediment, other) (v1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.7335647</li>
+</ul>
+<h2 id="data-sources">Data Sources<a class="headerlink" href="#data-sources" title="Permanent link">&para;</a></h2>
+<p>The CoastSeg transect and slope database is <a href="https://zenodo.org/records/8187949">available</a></p>
+<ul>
+<li>Buscombe, D., &amp; Fitzpatrick, S. (2023). CoastSeg: Beach transects and beachface slope database v1.0 (v1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.8187949</li>
+</ul>
+<p>Beach face slope and transect data have been derived from:</p>
+<ol>
+<li>
+<p>Doran, K.S., Long, J.W., Birchler, J.J., Brenner, O.T., Hardy, M.W., Morgan, K.L.M, Stockdon, H.F., and Torres, M.L., 2017, Lidar-derived beach morphology (dune crest, dune toe, and shoreline) for U.S. sandy coastlines (ver. 4.0, October 2020): U.S. Geological Survey data release, https://doi.org/10.5066/F7GF0S0Z.</p>
+</li>
+<li>
+<p>Kilian Vos. (2023). Time-series of shoreline change along the Pacific Rim (v1.4) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.7758183</p>
+</li>
+<li>
+<p>Andrew Short. (2022). Sediment size dataset for Australia [Data set]. In Australian Coastal Systems (0.1, p. XXV, 1241). Springer Cham. https://doi.org/10.5281/zenodo.7127186</p>
+</li>
+<li>
+<p>Vos, Kilian, Wen, Deng, Harley, Mitchell D., Turner, Ian L., &amp; Splinter, Kristen D. (2022). Beach-face slope dataset for Australia (Version 2) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.7272538</p>
+</li>
+<li>
+<p>Gibbs, A.E., Ohman, K.A., Coppersmith, R., and Richmond, B.M., 2017, National Assessment of Shoreline Change: A GIS compilation of updated vector shorelines and associated shoreline change data for the north coast of Alaska, U.S. Canadian border to Icy Cape: U.S. Geological Survey data release, https://doi.org/10.5066/F72Z13N1.</p>
+</li>
+<li>
+<p>Himmelstoss, E.A., Kratzmann, M., Hapke, C., Thieler, E.R., and List, J., 2010, The National Assessment of Shoreline Change: A GIS Compilation of Vector Shorelines and Associated Shoreline Change Data for the New England and Mid-Atlantic Coasts: U.S. Geological Survey Open-File Report 2010-1119, available at https://pubs.usgs.gov/of/2010/1119/.</p>
+</li>
+<li>
+<p>Snyder, A.G., and Gibbs, A.E., 2019, National assessment of shoreline change: A GIS compilation of updated vector shorelines and associated shoreline change data for the north coast of Alaska, Icy Cape to Cape Prince of Wales: U.S. Geological Survey data release, https://doi.org/10.5066/P9H1S1PV</p>
+</li>
+<li>
+<p>Romine, B.M., Fletcher, C.H., Genz, A.S., Barbee, M.M., Dyer, Matthew, Anderson, T.R., Lim, S.C., Vitousek, Sean, Bochicchio, Christopher, and Richmond, B.M., 2012, National Assessment of Shoreline Change: A GIS compilation of vector shorelines and associated shoreline change data for the sandy shorelines of Kauai, Oahu, and Maui, Hawaii: U.S. Geological Survey Open-File Report 2011-1009, available online at https://pubs.usgs.gov/of/2011/1009/.</p>
+</li>
+<li>
+<p>Gibbs, A.E., Jones, B.M., and Richmond, B.M., 2020, A GIS compilation of vector shorelines and coastal bluff edge positions, and associated rate-of-change data for Barter Island, Alaska: U.S. Geological Survey data release, https://doi.org/10.5066/P9CRBC5I.</p>
+</li>
+<li>
+<p>Sturdivant, E.J., Zeigler, S.L., Gutierrez, B.T., and Weber, K.M., 2019, Barrier island geomorphology and shorebird habitat metrics–Sixteen sites on the U.S. Atlantic Coast, 2013–2014: U.S. Geological Survey data release, https://doi.org/10.5066/P9V7F6UX.</p>
+</li>
+</ol>
+<p>Additional contributions:</p>
+<ol>
+<li>Sean Vitousek, USGS</li>
+</ol>
+<h2 id="authors-and-contributions">Authors and Contributions<a class="headerlink" href="#authors-and-contributions" title="Permanent link">&para;</a></h2>
+<p>Package maintainers:</p>
+<ul>
+<li><a href="https://github.com/2320sharon">@2320sharon</a> : Lead Software Developer / Contracted to USGS Pacific Coastal and Marine Science Center.</li>
+<li><a href="https://github.com/dbuscombe-usgs">@dbuscombe-usgs</a> Contracted to USGS Pacific Coastal and Marine Science Center.</li>
+<li><a href="https://github.com/mlundine">@mlundine</a> : USGS Pacific Coastal and Marine Science Center.</li>
+</ul>
+<p>Contributions:</p>
+<ul>
+<li><a href="https://github.com/ebgoldstein">@ebgoldstein</a></li>
+<li><a href="https://github.com/venuswku">@venuswku</a></li>
+<li><a href="https://github.com/robbibt">@robbibt</a></li>
+<li><a href="https://github.com/edlazarus">@edlazarus</a></li>
+<li>Beta testers: Catherine Janda, Ann Gibbs, Jon Warrick, Andrea O’Neill, Kathryn Weber, Julia Heslin (USGS)</li>
+<li>We would like to express our gratitude to all the contributors who made this release possible. Thank you to everyone who tested the beta versions of coastseg and provided us with the feedback we needed to improve coastseg. Thanks also to the developers and maintainers of pyTMD, DEA-tools, xarray, and GDAL, without which this project would be impossible</li>
+</ul>
+<h2 id="related-packages">Related Packages<a class="headerlink" href="#related-packages" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/kvos/CoastSat">CoastSat</a></li>
+<li><a href="https://github.com/SatelliteShorelines/coastsat_package">coastsat-package</a></li>
+<li><a href="https://github.com/Doodleverse/segmentation_zoo">Zoo</a></li>
+<li><a href="https://github.com/tsutterley/pyTMD">pyTMD</a></li>
+<li><a href="https://knowledge.dea.ga.gov.au/notebooks/Tools/">dea-tools</a></li>
+</ul>
+<p>See also other related repositories in the <a href="https://github.com/orgs/SatelliteShorelines/repositories">Satellite Shorelines GitHub Organization</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.f1b6f286.min.js"></script>
+      
+    
+  </body>
+</html>
